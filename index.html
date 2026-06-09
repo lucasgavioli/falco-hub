@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Falco — Organogramas</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #0d0d0d;
+      color: #e0e0e0;
+      font-family: 'Segoe UI', sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      gap: 32px;
+    }
+    h1 {
+      font-size: 2rem;
+      color: #f0a500;
+      letter-spacing: 2px;
+    }
+    .subtitle {
+      color: #888;
+      font-size: 0.95rem;
+    }
+    .cards {
+      display: flex;
+      gap: 24px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .card {
+      background: #1a1a1a;
+      border: 1px solid #333;
+      border-radius: 12px;
+      padding: 32px 40px;
+      text-align: center;
+      text-decoration: none;
+      color: #e0e0e0;
+      transition: all 0.2s;
+      min-width: 220px;
+    }
+    .card:hover {
+      border-color: #f0a500;
+      background: #222;
+      transform: translateY(-4px);
+      box-shadow: 0 8px 24px rgba(240,165,0,0.15);
+    }
+    .card .icon { font-size: 2.5rem; margin-bottom: 12px; }
+    .card .title { font-size: 1.1rem; font-weight: 600; margin-bottom: 6px; }
+    .card .desc { font-size: 0.82rem; color: #888; }
+  </style>
+</head>
+<body>
+  <div style="text-align:center">
+    <h1>🦅 Falco — Ecossistema</h1>
+    <p class="subtitle">Organogramas do sistema de agentes IA</p>
+  </div>
+  <div class="cards">
+    <a href="falco-organograma.html" class="card">
+      <div class="icon">🦅</div>
+      <div class="title">Falco — Organograma</div>
+      <div class="desc">Estrutura principal do agente e cadeia de comando</div>
+    </a>
+    <a href="organograma-agentes.html" class="card">
+      <div class="icon">🤖</div>
+      <div class="title">Ecossistema de Agentes</div>
+      <div class="desc">Mapa completo de IAs, plugins e integrações</div>
+    </a>
+  </div>
+</body>
+</html>

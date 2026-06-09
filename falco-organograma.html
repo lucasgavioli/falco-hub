@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Falco — Organograma Interativo</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#080c12;color:#e5e7eb;font-family:ui-sans-serif,system-ui,-apple-system,sans-serif;min-height:100vh;overflow-x:hidden}
+
+/* ── TOP BAR ── */
+header{background:#0d1117;border-bottom:1px solid #1f2937;padding:14px 24px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:100}
+header h1{font-size:16px;font-weight:700;color:#fbbf24;letter-spacing:.5px}
+header span{font-size:12px;color:#6b7280;margin-left:auto}
+.badge{display:inline-block;padding:2px 8px;border-radius:99px;font-size:10px;font-weight:700;letter-spacing:.3px}
+.badge-live{background:#14532d;color:#4ade80}
+.badge-planned{background:#1f2937;color:#6b7280}
+.badge-setup{background:#1c1f08;color:#bef264}
+
+/* ── LEGEND ── */
+.legend{display:flex;gap:16px;padding:12px 24px;background:#0d1117;border-bottom:1px solid #1a1f2e;flex-wrap:wrap}
+.leg-item{display:flex;align-items:center;gap:6px;font-size:11px;color:#9ca3af}
+.leg-dot{width:10px;height:10px;border-radius:50%}
+
+/* ── CANVAS ── */
+.canvas{padding:32px 20px 60px;max-width:1400px;margin:0 auto}
+
+/* ── TREE ── */
+.tree{display:flex;flex-direction:column;align-items:center;gap:0}
+.connector-v{width:2px;height:28px;background:#374151;margin:0 auto}
+.connector-h-wrap{display:flex;align-items:flex-start;justify-content:center;width:100%}
+
+/* ── NODES ── */
+.node{border-radius:10px;border:1.5px solid;padding:14px 18px;cursor:pointer;transition:all .2s;position:relative;user-select:none}
+.node:hover{transform:translateY(-2px);filter:brightness(1.15)}
+.node.ceo{background:#1c0e00;border-color:#f59e0b;min-width:220px;text-align:center}
+.node.falco{background:#120c00;border-color:#f59e0b;border-width:2px;min-width:320px;text-align:center}
+.node.memory{background:#0d1117;border-color:#374151;border-style:dashed;min-width:180px;text-align:center}
+.node-title{font-size:13px;font-weight:700;margin-bottom:2px}
+.node-sub{font-size:11px;color:#9ca3af}
+.node-desc{font-size:10px;color:#6b7280;margin-top:4px}
+.node-emoji{font-size:24px;display:block;margin-bottom:4px}
+.expand-hint{position:absolute;top:8px;right:10px;font-size:10px;color:#4b5563;transition:all .2s}
+.node.open .expand-hint{color:#a3a3a3}
+
+/* ── TIERS ROW ── */
+.tiers-row{display:flex;gap:16px;justify-content:center;flex-wrap:wrap;width:100%}
+
+/* ── TIER CARD ── */
+.tier-card{border-radius:10px;border:1.5px solid;overflow:hidden;min-width:200px;flex:1;max-width:280px;cursor:pointer;transition:all .2s}
+.tier-card:hover{transform:translateY(-2px)}
+.tier-card.t0{background:#0a1810;border-color:#166534}
+.tier-card.t1{background:#090f1f;border-color:#1d4ed8}
+.tier-card.t2{background:#100a1f;border-color:#6d28d9}
+.tier-card.t3{background:#140606;border-color:#991b1b}
+.tier-header{padding:12px 14px;display:flex;align-items:center;gap:8px}
+.tier-card.t0 .tier-header{background:#0f2918}
+.tier-card.t1 .tier-header{background:#0c1738}
+.tier-card.t2 .tier-header{background:#170d38}
+.tier-card.t3 .tier-header{background:#1f0808}
+.tier-num{font-size:10px;font-weight:700;opacity:.7}
+.tier-name{font-size:13px;font-weight:700;flex:1}
+.tier-model{font-size:10px;opacity:.6}
+.tier-card.t0 .tier-name{color:#86efac}
+.tier-card.t1 .tier-name{color:#93c5fd}
+.tier-card.t2 .tier-name{color:#c4b5fd}
+.tier-card.t3 .tier-name{color:#fca5a5}
+.tier-body{padding:10px 14px;border-top:1px solid rgba(255,255,255,.05)}
+.tier-uses{font-size:10px;color:#6b7280;margin-bottom:8px}
+.tier-cost{font-size:10px;font-weight:600;margin-bottom:10px}
+.tier-card.t0 .tier-cost{color:#4ade80}
+.tier-card.t1 .tier-cost{color:#60a5fa}
+.tier-card.t2 .tier-cost{color:#a78bfa}
+.tier-card.t3 .tier-cost{color:#f87171}
+.agents-list{display:none;flex-direction:column;gap:4px;margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,.06)}
+.tier-card.open .agents-list{display:flex}
+.agent-item{display:flex;align-items:center;gap:8px;padding:7px 9px;border-radius:7px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);transition:all .15s}
+.agent-item:hover{background:rgba(255,255,255,.07)}
+.agent-icon{font-size:14px;min-width:18px}
+.agent-info{flex:1}
+.agent-name{font-size:11px;font-weight:600;color:#e5e7eb}
+.agent-role{font-size:10px;color:#6b7280}
+.agent-status{font-size:9px;font-weight:700;padding:1px 6px;border-radius:99px;white-space:nowrap}
+.s-live{background:#14532d;color:#4ade80}
+.s-setup{background:#1c2408;color:#a3e635}
+.s-planned{background:#1a1f2e;color:#6b7280}
+
+/* ── CONCLAVE ── */
+.conclave-section{margin-top:24px;width:100%;max-width:860px}
+.conclave-header{background:#160808;border:1.5px solid #7f1d1d;border-radius:10px 10px 0 0;padding:12px 18px;cursor:pointer;display:flex;align-items:center;gap:10px;transition:all .2s}
+.conclave-header:hover{filter:brightness(1.1)}
+.conclave-title{font-size:13px;font-weight:700;color:#fca5a5;flex:1}
+.conclave-body{background:#0f0404;border:1.5px solid #7f1d1d;border-top:none;border-radius:0 0 10px 10px;display:none;padding:16px;gap:12px;flex-wrap:wrap}
+.conclave-section.open .conclave-body{display:flex}
+.conclave-node{flex:1;min-width:180px;background:#1a0606;border:1px solid #7f1d1d;border-radius:8px;padding:12px;text-align:center}
+.conclave-node-name{font-size:12px;font-weight:700;color:#fca5a5;margin-bottom:4px}
+.conclave-node-desc{font-size:10px;color:#9ca3af}
+.conclave-node-emoji{font-size:20px;display:block;margin-bottom:6px}
+
+/* ── BOTTOM ROW ── */
+.bottom-row{display:flex;gap:16px;margin-top:24px;flex-wrap:wrap;justify-content:center;width:100%;max-width:860px}
+.bottom-card{flex:1;min-width:180px;background:#0d1117;border:1px solid #1f2937;border-radius:10px;overflow:hidden;cursor:pointer;transition:all .2s}
+.bottom-card:hover{border-color:#374151;transform:translateY(-1px)}
+.bc-header{padding:10px 14px;font-size:12px;font-weight:700;color:#e5e7eb;background:#111827;display:flex;align-items:center;gap:8px}
+.bc-body{padding:10px 14px;display:none;flex-direction:column;gap:4px}
+.bottom-card.open .bc-body{display:flex}
+.bc-item{font-size:10px;color:#9ca3af;padding:3px 0;border-bottom:1px solid #1a1f2e}
+.bc-item:last-child{border:none}
+.bc-item strong{color:#d1d5db}
+
+/* ── PROJECTS ── */
+.projects-row{display:flex;gap:12px;margin-top:16px;flex-wrap:wrap;justify-content:center;width:100%;max-width:860px}
+.proj-pill{display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:99px;background:#111827;border:1px solid #1f2937;font-size:11px;font-weight:600;cursor:default;transition:all .2s}
+.proj-pill:hover{border-color:#374151}
+.proj-dot{width:8px;height:8px;border-radius:50%}
+.proj-pill.active .proj-dot{background:#4ade80}
+.proj-pill.dev .proj-dot{background:#a78bfa}
+
+/* ── SECTION LABELS ── */
+.section-label{font-size:10px;font-weight:700;letter-spacing:1.5px;color:#4b5563;text-transform:uppercase;margin-bottom:10px;text-align:center;width:100%}
+
+/* ── CONNECTORS (CSS) ── */
+.fan-wrap{width:100%;display:flex;justify-content:center}
+.fan-line{height:24px;background:linear-gradient(to bottom,#374151,transparent);width:2px}
+.horizontal-bar{height:2px;background:#1f2937;width:80%;max-width:820px;margin:0 auto}
+.branch-drops{display:flex;justify-content:space-around;width:80%;max-width:820px;margin:0 auto}
+.branch-drop{width:2px;height:16px;background:#374151}
+
+/* ── TOOLTIP ── */
+.tooltip{position:fixed;background:#1f2937;border:1px solid #374151;border-radius:8px;padding:8px 12px;font-size:11px;color:#d1d5db;pointer-events:none;z-index:999;max-width:240px;display:none;line-height:1.5}
+
+/* ── FOOTER ── */
+footer{text-align:center;padding:24px;font-size:10px;color:#374151;border-top:1px solid #111827}
+</style>
+</head>
+<body>
+
+<header>
+  <span style="font-size:20px">🦅</span>
+  <h1>FALCO — Organograma de Agentes</h1>
+  <span>Gavioli Corp · 2026</span>
+</header>
+
+<div class="legend">
+  <div class="leg-item"><div class="leg-dot" style="background:#4ade80"></div>✅ Ativo/Live</div>
+  <div class="leg-item"><div class="leg-dot" style="background:#a3e635"></div>🔧 Em setup</div>
+  <div class="leg-item"><div class="leg-dot" style="background:#374151"></div>📋 Planejado</div>
+  <div class="leg-item" style="margin-left:auto"><span style="color:#6b7280">Clique nos nós para expandir agentes →</span></div>
+</div>
+
+<div class="canvas">
+<div class="tree">
+
+  <!-- CEO -->
+  <div class="node ceo">
+    <div class="node-title" style="color:#fbbf24;font-size:14px">👑 CEO — Lucas Gavioli</div>
+    <div class="node-sub">Decide a direção · Valida entregas</div>
+  </div>
+
+  <div class="connector-v"></div>
+
+  <!-- FALCO -->
+  <div class="node falco" onclick="toggleNode(this)">
+    <span class="expand-hint">▼ clique</span>
+    <span class="node-emoji">🦅</span>
+    <div class="node-title" style="color:#fbbf24;font-size:16px">FALCO</div>
+    <div class="node-sub" style="font-size:12px">Gerente Geral · Orquestrador Central</div>
+    <div class="node-desc">Recebe tarefa → avalia complexidade → delega ao tier certo · Eu executo. O CEO decide.</div>
+    <div class="agents-list" style="margin-top:12px">
+      <div class="agent-item">
+        <span class="agent-icon">🎭</span>
+        <div class="agent-info">
+          <div class="agent-name">JARVIS SOUL</div>
+          <div class="agent-role">Identidade e tom de voz do sistema</div>
+        </div>
+        <span class="agent-status s-live">LIVE</span>
+      </div>
+      <div class="agent-item">
+        <span class="agent-icon">🏭</span>
+        <div class="agent-info">
+          <div class="agent-name">SQUAD CREATOR</div>
+          <div class="agent-role">Cria squads novas sob demanda</div>
+        </div>
+        <span class="agent-status s-planned">PLAN</span>
+      </div>
+      <div class="agent-item">
+        <span class="agent-icon">🎖️</span>
+        <div class="agent-info">
+          <div class="agent-name">AIOS MASTER</div>
+          <div class="agent-role">Coordena squads · Meta-orquestrador</div>
+        </div>
+        <span class="agent-status s-planned">PLAN</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- MEMORY + VERTICAL CONNECTOR -->
+  <div style="display:flex;align-items:flex-start;gap:16px;width:100%;max-width:860px;margin-top:0">
+    <div style="flex:1"></div>
+    <div class="connector-v" style="margin-top:0"></div>
+    <div style="flex:1;display:flex;justify-content:flex-end;padding-top:4px">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:6px">
+        <div style="width:60px;height:2px;background:#374151;border-radius:1px"></div>
+        <div class="node memory" style="min-width:200px">
+          <div class="node-title" style="color:#9ca3af;font-size:12px">🧠 MEMÓRIA ETERNA</div>
+          <div class="node-sub" style="font-size:10px">nomic-embed-text</div>
+          <div class="node-desc">LM Studio local · Grátis · Sempre on<br>Sessions indexadas · Memória permanente</div>
+          <div style="margin-top:6px;font-size:10px;color:#4ade80;font-weight:600">✅ LIVE</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- HORIZONTAL BAR FOR TIERS -->
+  <div class="horizontal-bar" style="margin-top:0"></div>
+  <div class="branch-drops">
+    <div class="branch-drop"></div>
+    <div class="branch-drop"></div>
+    <div class="branch-drop"></div>
+    <div class="branch-drop"></div>
+  </div>
+
+  <div class="section-label" style="margin-top:8px">Roteamento por complexidade</div>
+
+  <!-- TIERS ROW -->
+  <div class="tiers-row">
+
+    <!-- TIER 0 -->
+    <div class="tier-card t0" onclick="toggleTier(this)">
+      <div class="tier-header">
+        <div>
+          <div class="tier-num" style="color:#86efac">TIER 0</div>
+          <div class="tier-name">LM Studio</div>
+          <div class="tier-model">Qwen 2.5 Coder 7B · LOCAL</div>
+        </div>
+        <span style="font-size:10px;color:#4ade80;margin-left:auto">▼</span>
+      </div>
+      <div class="tier-body">
+        <div class="tier-uses">Rascunhos · Templates · Copywriting simples · Tarefas fáceis</div>
+        <div class="tier-cost">Custo: R$ 0,00 — sempre grátis</div>
+        <span class="badge badge-live">✅ LIVE</span>
+        <div class="agents-list">
+          <div class="agent-item">
+            <span class="agent-icon">✍️</span>
+            <div class="agent-info">
+              <div class="agent-name">Copywriter Básico</div>
+              <div class="agent-role">Textos simples, legendas, templates</div>
+            </div>
+            <span class="agent-status s-live">LIVE</span>
+          </div>
+          <div class="agent-item">
+            <span class="agent-icon">📄</span>
+            <div class="agent-info">
+              <div class="agent-name">Template Creator</div>
+              <div class="agent-role">Cria templates reutilizáveis</div>
+            </div>
+            <span class="agent-status s-planned">PLAN</span>
+          </div>
+          <div class="agent-item">
+            <span class="agent-icon">📋</span>
+            <div class="agent-info">
+              <div class="agent-name">Draft Writer</div>
+              <div class="agent-role">Primeiras versões de documentos</div>
+            </div>
+            <span class="agent-status s-planned">PLAN</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TIER 1 -->
+    <div class="tier-card t1" onclick="toggleTier(this)">
+      <div class="tier-header">
+        <div>
+          <div class="tier-num" style="color:#93c5fd">TIER 1</div>
+          <div class="tier-name">Gemini 3.1 Pro</div>
+          <div class="tier-model">Google · API Token</div>
+        </div>
+        <span style="font-size:10px;color:#60a5fa;margin-left:auto">▼</span>
+      </div>
+      <div class="tier-body">
+        <div class="tier-uses">Pesquisa web · Conteúdo · Gestão · Gavioli Records · Checklist ST · Produto Nutricional</div>
+        <div class="tier-cost">Custo: baixo — API Google</div>
+        <span class="badge badge-live">✅ LIVE</span>
+        <div class="agents-list">
+          <div class="agent-item">
+            <span class="agent-icon">📊</span>
+            <div class="agent-info">
+              <div class="agent-name">ANALYST</div>
+              <div class="agent-role">Pesquisa e estratégia de mercado</div>
+            </div>
+            <span class="agent-status s-setup">SETUP</span>
+          </div>
+          <div class="agent-item">
+            <span class="agent-icon">📅</span>
+            <div class="agent-info">
+              <div class="agent-name">PROJECT MANAGER</div>
+              <div class="agent-role">Planejamento e orquestração</div>
+            </div>
+            <span class="agent-status s-setup">SETUP</span>
+          </div>
+          <div class="agent-item">
+            <span class="agent-icon">🎯</span>
+            <div class="agent-info">
+              <div class="agent-name">PRODUCT OWNER</div>
+              <div class="agent-role">Priorização e backlog de produto</div>
+            </div>
+            <span class="agent-status s-planned">PLAN</span>
+          </div>
+          <div class="agent-item">
+            <span class="agent-icon">🔄</span>
+            <div class="agent-info">
+              <div class="agent-name">SCRUM MASTER</div>
+              <div class="agent-role">Gestão de tarefas e sprints</div>
+            </div>
+            <span class="agent-status s-planned">PLAN</span>
+          </div>
+          <div class="agent-item">
+            <span class="agent-icon">🎵</span>
+            <div class="agent-info">
+              <div class="agent-name">Content Creator</div>
+              <div class="agent-role">Posts Gavioli Records (TikTok/YT/Kwai)</div>
+            </div>
+            <span class="agent-status s-setup">SETUP</span>
+          </div>
+          <div class="agent-item">
+            <span class="agent-icon">🏥</span>
+            <div class="agent-info">
+              <div class="agent-name">Health Writer</div>
+              <div class="agent-role">Conteúdo produto nutricional (whey)</div>
+            </div>
+            <span class="agent-status s-planned">PLAN</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TIER 2 -->
+    <div class="tier-card t2" onclick="toggleTier(this)">
+      <div class="tier-header">
+        <div>
+          <div class="tier-num" style="color:#c4b5fd">TIER 2</div>
+          <div class="tier-name">Claude Sonnet</div>
+          <div class="tier-model">Anthropic · Claude-CLI · Atual</div>
+        </div>
+        <span style="font-size:10px;color:#a78bfa;margin-left:auto">▼</span>
+      </div>
+      <div class="tier-body">
+        <div class="tier-uses">Placar Analítico Pro · Programação · Execução técnica · Tarefas diárias</div>
+        <div class="tier-cost">Custo: médio — uso diário</div>
+        <span class="badge badge-live">✅ LIVE (você fala comigo aqui)</span>
+        <div class="agents-list">
+          <div class="agent-item">
+            <span class="agent-icon">🏗️</span>
+            <div class="agent-info">
+              <div class="agent-name">ARCHITECT</div>
+              <div class="agent-role">Design de sistemas e arquitetura</div>
+            </div>
+            <span class="agent-status s-live">LIVE</span>
+          </div>
+          <div class="agent-item">
+            <span class="agent-icon">💻</span>
+            <div class="agent-info">
+              <div class="agent-name">DEVELOPER</div>
+              <div class="agent-role">Programação e implementação</div>
+            </div>
+            <span class="agent-status s-live">LIVE</span>
+          </div>
+          <div class="agent-item">
+            <span class="agent-icon">🎨</span>
+            <div class="agent-info">
+              <div class="agent-name">UX DESIGNER</div>
+              <div class="agent-role">Interfaces, UX e UI de dashboards</div>
+            </div>
+            <span class="agent-status s-setup">SETUP</span>
+          </div>
+          <div class="agent-item">
+            <span class="agent-icon">🧪</span>
+            <div class="agent-info">
+              <div class="agent-name">QA TESTER</div>
+              <div class="agent-role">Testes e garantia de qualidade</div>
+            </div>
+            <span class="agent-status s-setup">SETUP</span>
+          </div>
+          <div class="agent-item">
+            <span class="agent-icon">🚀</span>
+            <div class="agent-info">
+              <div class="agent-name">DEVOPS</div>
+              <div class="agent-role">Deploy e infraestrutura</div>
+            </div>
+            <span class="agent-status s-setup">SETUP</span>
+          </div>
+          <div class="agent-item">
+            <span class="agent-icon">🗄️</span>
+            <div class="agent-info">
+              <div class="agent-name">DATA ENGINEER</div>
+              <div class="agent-role">Banco de dados e pipelines</div>
+            </div>
+            <span class="agent-status s-setup">SETUP</span>
+          </div>
+          <div class="agent-item">
+            <span class="agent-icon">🔍</span>
+            <div class="agent-info">
+              <div class="agent-name">ROOTCAUSE</div>
+              <div class="agent-role">Diagnóstico de bugs e falhas</div>
+            </div>
+            <span class="agent-status s-live">LIVE</span>
+          </div>
+          <div class="agent-item">
+            <span class="agent-icon">🛡️</span>
+            <div class="agent-info">
+              <div class="agent-name">Checklist ST Agent</div>
+              <div class="agent-role">Imagem → NR → multa (Segurança do Trabalho)</div>
+            </div>
+            <span class="agent-status s-setup">SETUP</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TIER 3 -->
+    <div class="tier-card t3" onclick="toggleTier(this)">
+      <div class="tier-header">
+        <div>
+          <div class="tier-num" style="color:#fca5a5">TIER 3</div>
+          <div class="tier-name">Claude Opus</div>
+          <div class="tier-model">Anthropic · Máximo · Reserva</div>
+        </div>
+        <span style="font-size:10px;color:#f87171;margin-left:auto">▼</span>
+      </div>
+      <div class="tier-body">
+        <div class="tier-uses">Forex Robot · Decisões estratégicas · Arquitetura crítica · Problemas complexos</div>
+        <div class="tier-cost">Custo: alto — usar com parcimônia</div>
+        <span class="badge badge-live">✅ LIVE</span>
+        <div class="agents-list">
+          <div class="agent-item">
+            <span class="agent-icon">📈</span>
+            <div class="agent-info">
+              <div class="agent-name">Forex Strategy Advisor</div>
+              <div class="agent-role">XAUUSD · FImathe · MT5</div>
+            </div>
+            <span class="agent-status s-setup">SETUP</span>
+          </div>
+          <div class="agent-item">
+            <span class="agent-icon">🧠</span>
+            <div class="agent-info">
+              <div class="agent-name">Strategic Planner</div>
+              <div class="agent-role">Decisões de alto impacto nos projetos</div>
+            </div>
+            <span class="agent-status s-live">LIVE</span>
+          </div>
+          <div class="agent-item">
+            <span class="agent-icon">⚔️</span>
+            <div class="agent-info">
+              <div class="agent-name">CONCLAVE CRÍTICO</div>
+              <div class="agent-role">Audita lógica e falhas</div>
+            </div>
+            <span class="agent-status s-planned">PLAN</span>
+          </div>
+          <div class="agent-item">
+            <span class="agent-icon">⚖️</span>
+            <div class="agent-info">
+              <div class="agent-name">CONCLAVE ADVOGADO</div>
+              <div class="agent-role">Ataca o plano · Advocatus diaboli</div>
+            </div>
+            <span class="agent-status s-planned">PLAN</span>
+          </div>
+          <div class="agent-item">
+            <span class="agent-icon">🧬</span>
+            <div class="agent-info">
+              <div class="agent-name">CONCLAVE SINTETIZADOR</div>
+              <div class="agent-role">Integra a melhor solução final</div>
+            </div>
+            <span class="agent-status s-planned">PLAN</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- end tiers-row -->
+
+  <div class="connector-v" style="height:20px;margin-top:16px"></div>
+
+  <!-- MEGA-BRAIN CONCLAVE -->
+  <div class="conclave-section" onclick="toggleConclave(this)">
+    <div class="conclave-header">
+      <span style="font-size:18px">🧠</span>
+      <div class="conclave-title">Mega-Brain Conclave — Cérebro Coletivo</div>
+      <span style="font-size:11px;color:#6b7280">3 especialistas debatem cada decisão crítica</span>
+      <span style="font-size:10px;color:#4b5563;margin-left:12px">▼</span>
+    </div>
+    <div class="conclave-body">
+      <div class="conclave-node">
+        <span class="conclave-node-emoji">⚔️</span>
+        <div class="conclave-node-name">CRÍTICO</div>
+        <div class="conclave-node-desc">Analisa falhas, gaps lógicos e riscos do plano</div>
+        <div style="margin-top:8px"><span class="badge badge-planned">PLANEJADO</span></div>
+      </div>
+      <div class="conclave-node">
+        <span class="conclave-node-emoji">⚖️</span>
+        <div class="conclave-node-name">ADVOGADO</div>
+        <div class="conclave-node-desc">Ataca o plano do ponto de vista do adversário</div>
+        <div style="margin-top:8px"><span class="badge badge-planned">PLANEJADO</span></div>
+      </div>
+      <div class="conclave-node">
+        <span class="conclave-node-emoji">🧬</span>
+        <div class="conclave-node-name">SINTETIZADOR</div>
+        <div class="conclave-node-desc">Integra críticas e produz a melhor solução final</div>
+        <div style="margin-top:8px"><span class="badge badge-planned">PLANEJADO</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOOLING & INFRA ROW -->
+  <div class="connector-v" style="height:20px;margin-top:8px"></div>
+  <div class="section-label">Ferramentas & Infraestrutura</div>
+  <div class="bottom-row">
+
+    <div class="bottom-card" onclick="toggleCard(this)">
+      <div class="bc-header">🗄️ Bancos de Dados <span style="margin-left:auto;font-size:10px;color:#6b7280">▼</span></div>
+      <div class="bc-body">
+        <div class="bc-item"><strong>Firestore</strong> — Firebase NoSQL (cloud)</div>
+        <div class="bc-item"><strong>PineCone</strong> — Vector DB (planejado)</div>
+        <div class="bc-item"><strong>PgVector</strong> — PostgreSQL + vetorial</div>
+        <div class="bc-item"><strong>ChromaDB</strong> — embeddings local</div>
+        <div class="bc-item"><strong>SQLite</strong> — mobile/on-device memory</div>
+      </div>
+    </div>
+
+    <div class="bottom-card" onclick="toggleCard(this)">
+      <div class="bc-header">⚙️ APIs & Backend <span style="margin-left:auto;font-size:10px;color:#6b7280">▼</span></div>
+      <div class="bc-body">
+        <div class="bc-item"><strong>FastAPI</strong> — backend Python</div>
+        <div class="bc-item"><strong>Firebase Functions</strong> — serverless</div>
+        <div class="bc-item"><strong>Cloud Run</strong> — containers GCP</div>
+        <div class="bc-item"><strong>Lambda</strong> — AWS serverless (backup)</div>
+        <div class="bc-item"><strong>ExpressJS</strong> — Node.js API</div>
+      </div>
+    </div>
+
+    <div class="bottom-card" onclick="toggleCard(this)">
+      <div class="bc-header">🤖 Automação <span style="margin-left:auto;font-size:10px;color:#6b7280">▼</span></div>
+      <div class="bc-body">
+        <div class="bc-item"><strong>n8n</strong> — fluxos de automação (prioridade)</div>
+        <div class="bc-item"><strong>Make</strong> — automação visual</div>
+        <div class="bc-item"><strong>Zapier</strong> — integrações rápidas</div>
+        <div class="bc-item"><strong>Apify</strong> — web scraping</div>
+        <div class="bc-item"><strong>Lindy</strong> — agente de automação</div>
+      </div>
+    </div>
+
+    <div class="bottom-card" onclick="toggleCard(this)">
+      <div class="bc-header">🎨 Criação de Conteúdo <span style="margin-left:auto;font-size:10px;color:#6b7280">▼</span></div>
+      <div class="bc-body">
+        <div class="bc-item"><strong>ElevenLabs</strong> — TTS (voice)</div>
+        <div class="bc-item"><strong>HeyGen</strong> — vídeos com avatar</div>
+        <div class="bc-item"><strong>Suno</strong> — música IA</div>
+        <div class="bc-item"><strong>Kling / Runway</strong> — vídeo IA</div>
+        <div class="bc-item"><strong>Gamma</strong> — apresentações IA</div>
+      </div>
+    </div>
+
+    <div class="bottom-card" onclick="toggleCard(this)">
+      <div class="bc-header">☁️ Cloud Platform <span style="margin-left:auto;font-size:10px;color:#6b7280">▼</span></div>
+      <div class="bc-body">
+        <div class="bc-item"><strong>Firebase</strong> — hosting + DB ativo</div>
+        <div class="bc-item"><strong>Supabase</strong> — PostgreSQL cloud</div>
+        <div class="bc-item"><strong>Google Cloud</strong> — Vertex AI + Run</div>
+        <div class="bc-item"><strong>AWS</strong> — Lambda + Bedrock</div>
+        <div class="bc-item"><strong>Azure</strong> — backup cloud</div>
+      </div>
+    </div>
+
+  </div><!-- end bottom-row -->
+
+  <!-- PROJETOS -->
+  <div class="connector-v" style="height:16px"></div>
+  <div class="section-label">Projetos Ativos do CEO</div>
+  <div class="projects-row">
+    <div class="proj-pill active">
+      <div class="proj-dot"></div>
+      ⚽ Placar Analítico Pro
+    </div>
+    <div class="proj-pill active">
+      <div class="proj-dot"></div>
+      🎵 Gavioli Records
+    </div>
+    <div class="proj-pill dev">
+      <div class="proj-dot"></div>
+      🦺 Checklist Segurança do Trabalho
+    </div>
+    <div class="proj-pill dev">
+      <div class="proj-dot"></div>
+      📈 Forex Robot (XAUUSD)
+    </div>
+    <div class="proj-pill dev">
+      <div class="proj-dot"></div>
+      💊 Produto Nutricional (Whey)
+    </div>
+  </div>
+
+  <!-- IA POR FUNÇÃO -->
+  <div class="connector-v" style="height:20px"></div>
+  <div class="section-label">IAs por Função — Qual usar para cada tarefa?</div>
+  <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center;width:100%;max-width:1100px;margin-bottom:8px">
+
+    <!-- PROGRAMAÇÃO -->
+    <div style="background:#100a1f;border:1.5px solid #6d28d9;border-radius:10px;overflow:hidden;min-width:180px;flex:1;max-width:240px">
+      <div style="background:#170d38;padding:10px 14px;display:flex;align-items:center;gap:8px">
+        <span style="font-size:16px">💻</span>
+        <span style="font-size:12px;font-weight:700;color:#c4b5fd">PROGRAMAÇÃO</span>
+      </div>
+      <div style="padding:10px 14px;display:flex;flex-direction:column;gap:5px">
+        <div style="display:flex;justify-content:space-between;align-items:center;font-size:10px"><span style="color:#e5e7eb;font-weight:600">Claude Sonnet</span><span style="color:#a78bfa">⭐⭐⭐⭐⭐ Principal</span></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;font-size:10px"><span style="color:#e5e7eb;font-weight:600">Claude Opus</span><span style="color:#f87171">⭐⭐⭐⭐⭐ Complexo</span></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;font-size:10px"><span style="color:#e5e7eb;font-weight:600">Qwen 2.5 Coder</span><span style="color:#86efac">⭐⭐⭐ Grátis</span></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;font-size:10px"><span style="color:#9ca3af">Cursor / Copilot</span><span style="color:#6b7280">IDE externo</span></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;font-size:10px"><span style="color:#9ca3af">Replit / Lovable</span><span style="color:#6b7280">No-code/low-code</span></div>
+      </div>
+    </div>
+
+    <!-- IMAGEM -->
+    <div style="background:#0c0c1f;border:1.5px solid #4338ca;border-radius:10px;overflow:hidden;min-width:180px;flex:1;max-width:240px">
+      <div style="background:#111133;padding:10px 14px;display:flex;align-items:center;gap:8px">
+        <span style="font-size:16px">🎨</span>
+        <span style="font-size:12px;font-weight:700;color:#a5b4fc">IMAGEM</span>
+      </div>
+      <div style="padding:10px 14px;display:flex;flex-direction:column;gap:5px">
+        <div style="display:flex;justify-content:space-between;align-items:center;font-size:10px"><span style="color:#e5e7eb;font-weight:600">Midjourney</span><span style="color:#a5b4fc">⭐⭐⭐⭐⭐ Melhor</span></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;font-size:10px"><span style="color:#e5e7eb;font-weight:600">DALL-E 3</span><span style="color:#93c5fd">⭐⭐⭐⭐ OpenAI</span></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;font-size:10px"><span style="color:#e5e7eb;font-weight:600">Adobe Firefly</span><span style="color:#93c5fd">⭐⭐⭐⭐ Comercial</span></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;font-size:10px"><span style="color:#9ca3af">Stable Diffusion</span><span style="color:#86efac">Local/Grátis</span></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;font-size:10px"><span style="color:#9ca3af">Higgsfield / Flux</span><span style="color:#6b7280">Alternativas</span></div>
+      </div>
+    </div>
+
+    <!-- VÍDEO -->
+    <div style="background:#0f1208;border:1.5px solid #3f6212;border-radius:10px;overflow:hidden;min-width:180px;flex:1;max-width:240px">
+      <div style="background:#1a2108;padding:10px 14px;display:flex;align-items:center;gap:8px">
+        <span style="font-size:16px">🎬</span>
+        <span style="font-size:12px;font-weight:700;color:#bef264">VÍDEO</span>
+      </div>
+      <div style="padding:10px 14px;display:flex;flex-direction:column;gap:5px">
+        <div style="display:flex;justify-content:space-between;align-items:center;font-size:10px"><span style="color:#e5e7eb;font-weight:600">HeyGen</span><span style="color:#bef264">⭐⭐⭐⭐⭐ Avatar</span></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;font-size:10px"><span style="color:#e5e7eb;font-weight:600">Kling AI</span><span style="color:#a3e635">⭐⭐⭐⭐ Geração</span></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;font-size:10px"><span style="color:#e5e7eb;font-weight:600">Runway Gen-3</span><span style="color:#a3e635">⭐⭐⭐⭐ Edição</span></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;font-size:10px"><span style="color:#9ca3af">Veo (Google)</span><span style="color:#6b7280">Em acesso</span></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;font-size:10px"><span style="color:#9ca3af">Synthesia</span><span style="color:#6b7280">Apresentações</span></div>
+      </div>
+    </div>
+
+    <!-- ÁUDIO / MÚSICA -->
+    <div style="background:#120c08;border:1.5px solid #92400e;border-radius:10px;overflow:hidden;min-width:180px;flex:1;max-width:240px">
+      <div style="background:#1f1008;padding:10px 14px;display:flex;align-items:center;gap:8px">
+        <span style="font-size:16px">🎵</span>
+        <span style="font-size:12px;font-weight:700;color:#fb923c">ÁUDIO / MÚSICA</span>
+      </div>
+      <div style="padding:10px 14px;display:flex;flex-direction:column;gap:5px">
+        <div style="display:flex;justify-content:space-between;align-items:center;font-size:10px"><span style="color:#e5e7eb;font-weight:600">ElevenLabs</span><span style="color:#fb923c">⭐⭐⭐⭐⭐ Voz/TTS</span></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;font-size:10px"><span style="color:#e5e7eb;font-weight:600">Suno AI</span><span style="color:#fdba74">⭐⭐⭐⭐ Música</span></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;font-size:10px"><span style="color:#e5e7eb;font-weight:600">Udio</span><span style="color:#fdba74">⭐⭐⭐⭐ Música</span></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;font-size:10px"><span style="color:#9ca3af">Artlist AI</span><span style="color:#6b7280">Trilha comercial</span></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;font-size:10px"><span style="color:#9ca3af">Whisper (local)</span><span style="color:#86efac">STT grátis</span></div>
+      </div>
+    </div>
+
+    <!-- ROTEIRO / ESCRITA -->
+    <div style="background:#0a0c0f;border:1.5px solid #0e7490;border-radius:10px;overflow:hidden;min-width:180px;flex:1;max-width:240px">
+      <div style="background:#0c1820;padding:10px 14px;display:flex;align-items:center;gap:8px">
+        <span style="font-size:16px">✍️</span>
+        <span style="font-size:12px;font-weight:700;color:#67e8f9">ROTEIRO / ESCRITA</span>
+      </div>
+      <div style="padding:10px 14px;display:flex;flex-direction:column;gap:5px">
+        <div style="display:flex;justify-content:space-between;align-items:center;font-size:10px"><span style="color:#e5e7eb;font-weight:600">Claude Sonnet</span><span style="color:#67e8f9">⭐⭐⭐⭐⭐ Principal</span></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;font-size:10px"><span style="color:#e5e7eb;font-weight:600">Gemini 3.1 Pro</span><span style="color:#38bdf8">⭐⭐⭐⭐ Conteúdo</span></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;font-size:10px"><span style="color:#e5e7eb;font-weight:600">NotebookLM</span><span style="color:#38bdf8">⭐⭐⭐⭐ Pesquisa</span></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;font-size:10px"><span style="color:#9ca3af">Manus AI</span><span style="color:#6b7280">Long-form</span></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;font-size:10px"><span style="color:#9ca3af">Grammarly</span><span style="color:#6b7280">Revisão/EN</span></div>
+      </div>
+    </div>
+
+    <!-- PESQUISA -->
+    <div style="background:#080f0a;border:1.5px solid #065f46;border-radius:10px;overflow:hidden;min-width:180px;flex:1;max-width:240px">
+      <div style="background:#0a1f14;padding:10px 14px;display:flex;align-items:center;gap:8px">
+        <span style="font-size:16px">🔎</span>
+        <span style="font-size:12px;font-weight:700;color:#6ee7b7">PESQUISA</span>
+      </div>
+      <div style="padding:10px 14px;display:flex;flex-direction:column;gap:5px">
+        <div style="display:flex;justify-content:space-between;align-items:center;font-size:10px"><span style="color:#e5e7eb;font-weight:600">Perplexity AI</span><span style="color:#6ee7b7">⭐⭐⭐⭐⭐ Melhor</span></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;font-size:10px"><span style="color:#e5e7eb;font-weight:600">Gemini 3.1 Pro</span><span style="color:#34d399">⭐⭐⭐⭐ Web</span></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;font-size:10px"><span style="color:#e5e7eb;font-weight:600">NotebookLM</span><span style="color:#34d399">⭐⭐⭐⭐ Docs</span></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;font-size:10px"><span style="color:#9ca3af">ChatGPT Search</span><span style="color:#6b7280">Alternativa</span></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;font-size:10px"><span style="color:#9ca3af">Falco + Web</span><span style="color:#86efac">Interno</span></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- RULE -->
+  <div style="margin-top:16px;background:#0d1117;border:1px solid #1f2937;border-radius:8px;padding:14px 20px;max-width:680px;text-align:center">
+    <div style="font-size:11px;font-weight:700;color:#6b7280;letter-spacing:1px;margin-bottom:6px">REGRA DE ROTEAMENTO</div>
+    <div style="font-size:12px;color:#9ca3af;line-height:1.7">
+      Simples → <span style="color:#86efac">Qwen (TIER 0)</span> · Pesquisa/Conteúdo → <span style="color:#93c5fd">Gemini (TIER 1)</span><br>
+      Dev/Execução → <span style="color:#c4b5fd">Sonnet (TIER 2)</span> · Estratégia/Complexo → <span style="color:#fca5a5">Opus (TIER 3)</span><br>
+      <span style="color:#4b5563;font-size:10px;margin-top:4px;display:block">Sempre tenta o tier mais baixo que resolve. Sobe só quando necessário.</span>
+    </div>
+  </div>
+
+</div><!-- end tree -->
+</div><!-- end canvas -->
+
+<footer>Gavioli Corp · Falco 🦅 · OpenClaw · 2026 — Organograma gerado e mantido pelo próprio sistema</footer>
+
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+function toggleNode(el){
+  el.classList.toggle('open');
+  const hint=el.querySelector('.expand-hint');
+  if(hint) hint.textContent=el.classList.contains('open')?'▲ fechar':'▼ clique';
+}
+function toggleTier(el){
+  el.classList.toggle('open');
+}
+function toggleCard(el){
+  el.classList.toggle('open');
+}
+function toggleConclave(el){
+  el.classList.toggle('open');
+}
+
+// Keyboard: press 'E' to expand all, 'C' to collapse all
+document.addEventListener('keydown',e=>{
+  if(e.key==='e'||e.key==='E'){
+    document.querySelectorAll('.tier-card,.node.falco,.bottom-card,.conclave-section').forEach(n=>n.classList.add('open'));
+    document.querySelectorAll('.expand-hint').forEach(h=>h.textContent='▲ fechar');
+  }
+  if(e.key==='c'||e.key==='C'){
+    document.querySelectorAll('.tier-card,.node.falco,.bottom-card,.conclave-section').forEach(n=>n.classList.remove('open'));
+    document.querySelectorAll('.expand-hint').forEach(h=>h.textContent='▼ clique');
+  }
+});
+</script>
+</body>
+</html>
