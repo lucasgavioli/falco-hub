@@ -1,0 +1,1196 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FALCO — Mission Control</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&family=Rajdhani:wght@300;400;600;700&display=swap');
+
+:root {
+  --cyan: #00f5ff;
+  --cyan-dim: #00a8b5;
+  --green: #00ff88;
+  --green-dim: #00994d;
+  --amber: #ffb700;
+  --red: #ff3c5a;
+  --purple: #b06aff;
+  --blue: #4d9fff;
+  --bg: #020810;
+  --bg2: #060d1a;
+  --bg3: #0a1628;
+  --border: rgba(0,245,255,0.15);
+  --border-bright: rgba(0,245,255,0.4);
+  --text: #c8e8ff;
+  --text-dim: #5a7a9a;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Rajdhani', sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+  background-image:
+    radial-gradient(ellipse at 20% 50%, rgba(0,100,200,0.04) 0%, transparent 60%),
+    radial-gradient(ellipse at 80% 20%, rgba(0,245,255,0.03) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 80%, rgba(0,255,136,0.02) 0%, transparent 50%);
+}
+
+/* ── SCAN LINE EFFECT ── */
+body::before {
+  content:'';
+  position:fixed;
+  top:0;left:0;right:0;bottom:0;
+  background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px);
+  pointer-events:none;
+  z-index:1000;
+}
+
+/* ── HEADER ── */
+header {
+  background: linear-gradient(180deg, rgba(0,20,50,0.95) 0%, rgba(2,8,16,0.9) 100%);
+  border-bottom: 1px solid var(--border-bright);
+  padding: 12px 24px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  backdrop-filter: blur(10px);
+}
+
+.logo {
+  font-family: 'Orbitron', monospace;
+  font-size: 22px;
+  font-weight: 900;
+  color: var(--cyan);
+  text-shadow: 0 0 20px rgba(0,245,255,0.6), 0 0 40px rgba(0,245,255,0.3);
+  letter-spacing: 4px;
+}
+
+.logo span { color: var(--amber); }
+
+.header-sub {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 11px;
+  color: var(--text-dim);
+  letter-spacing: 2px;
+}
+
+.header-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.status-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 99px;
+  border: 1px solid;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 1px;
+}
+
+.status-pill.online { border-color: var(--green); color: var(--green); }
+.status-pill.online .dot { background: var(--green); box-shadow: 0 0 8px var(--green); }
+.dot { width:6px;height:6px;border-radius:50%;animation:pulse 2s infinite; }
+
+#clock {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 13px;
+  color: var(--cyan);
+}
+
+/* ── NAV TABS ── */
+.nav-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 0 24px;
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+}
+
+.tab {
+  padding: 10px 20px;
+  font-family: 'Orbitron', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: var(--text-dim);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+}
+
+.tab:hover { color: var(--cyan); }
+.tab.active { color: var(--cyan); border-bottom-color: var(--cyan); }
+
+/* ── MAIN GRID ── */
+.main {
+  padding: 20px 24px;
+  max-width: 1600px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 280px 1fr 280px;
+  gap: 16px;
+}
+
+.panel {
+  display: none;
+  grid-column: 1 / -1;
+}
+.panel.active { display: contents; }
+
+/* ── CARDS ── */
+.card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  transition: border-color 0.2s;
+}
+.card:hover { border-color: var(--border-bright); }
+
+.card-header {
+  padding: 10px 14px;
+  background: rgba(0,245,255,0.04);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'Orbitron', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: var(--cyan);
+}
+
+.card-body { padding: 14px; }
+
+/* ── CENTER PANEL ── */
+.center { grid-column: 2; }
+
+/* ── CORE NODE ── */
+.core-node {
+  background: radial-gradient(ellipse at center, rgba(0,245,255,0.08) 0%, transparent 70%);
+  border: 1px solid var(--cyan);
+  border-radius: 50%;
+  width: 180px;
+  height: 180px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin: 20px auto;
+  position: relative;
+  box-shadow: 0 0 30px rgba(0,245,255,0.2), inset 0 0 30px rgba(0,245,255,0.05);
+  animation: orbit-glow 4s ease-in-out infinite;
+}
+
+.core-node::before, .core-node::after {
+  content:'';
+  position:absolute;
+  border-radius:50%;
+  border: 1px solid rgba(0,245,255,0.2);
+  animation: spin 8s linear infinite;
+}
+.core-node::before { width:220px;height:220px; }
+.core-node::after { width:260px;height:260px;animation-duration:14s;animation-direction:reverse;border-style:dashed; }
+
+.core-emoji { font-size: 48px; }
+.core-name {
+  font-family: 'Orbitron', monospace;
+  font-size: 16px;
+  font-weight: 900;
+  color: var(--cyan);
+  text-shadow: 0 0 20px rgba(0,245,255,0.8);
+  letter-spacing: 3px;
+}
+.core-role {
+  font-size: 10px;
+  color: var(--text-dim);
+  letter-spacing: 2px;
+  margin-top: 2px;
+}
+
+/* ── TIER CARDS ── */
+.tiers-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.tier {
+  border-radius: 8px;
+  border: 1px solid;
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.tier:hover { transform: translateY(-2px); }
+
+.tier.t0 { background: rgba(0,255,136,0.04); border-color: rgba(0,255,136,0.3); }
+.tier.t1 { background: rgba(77,159,255,0.04); border-color: rgba(77,159,255,0.3); }
+.tier.t2 { background: rgba(176,106,255,0.04); border-color: rgba(176,106,255,0.3); }
+.tier.t3 { background: rgba(255,60,90,0.04); border-color: rgba(255,60,90,0.3); }
+
+.tier-head {
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.tier.t0 .tier-head { background: rgba(0,255,136,0.06); }
+.tier.t1 .tier-head { background: rgba(77,159,255,0.06); }
+.tier.t2 .tier-head { background: rgba(176,106,255,0.06); }
+.tier.t3 .tier-head { background: rgba(255,60,90,0.06); }
+
+.tier-num {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 9px;
+  opacity: 0.6;
+}
+.tier-info { flex: 1; }
+.tier-name {
+  font-family: 'Orbitron', monospace;
+  font-size: 11px;
+  font-weight: 700;
+}
+.tier.t0 .tier-name { color: var(--green); }
+.tier.t1 .tier-name { color: var(--blue); }
+.tier.t2 .tier-name { color: var(--purple); }
+.tier.t3 .tier-name { color: var(--red); }
+
+.tier-model { font-size: 10px; color: var(--text-dim); }
+.tier-cost { font-size: 9px; font-family:'Share Tech Mono',monospace; padding: 8px 12px; }
+.tier.t0 .tier-cost { color: var(--green); }
+.tier.t1 .tier-cost { color: var(--blue); }
+.tier.t2 .tier-cost { color: var(--purple); }
+.tier.t3 .tier-cost { color: var(--red); }
+
+/* ── AGENT ITEMS ── */
+.agent-list { padding: 0 12px 10px; display: flex; flex-direction: column; gap: 4px; }
+.agent-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,255,255,0.04);
+  font-size: 11px;
+}
+.agent-row:hover { background: rgba(255,255,255,0.04); }
+.agent-icon { font-size: 14px; min-width: 18px; }
+.agent-name-col { flex: 1; }
+.agent-n { font-weight: 600; color: var(--text); }
+.agent-r { font-size: 10px; color: var(--text-dim); }
+.badge {
+  font-size: 8px;
+  font-family: 'Share Tech Mono', monospace;
+  padding: 2px 6px;
+  border-radius: 99px;
+  font-weight: 700;
+}
+.b-live { background: rgba(0,255,136,0.15); color: var(--green); border: 1px solid rgba(0,255,136,0.3); }
+.b-setup { background: rgba(255,183,0,0.15); color: var(--amber); border: 1px solid rgba(255,183,0,0.3); }
+.b-plan { background: rgba(90,122,154,0.15); color: var(--text-dim); border: 1px solid rgba(90,122,154,0.2); }
+
+/* ── LEFT / RIGHT PANELS ── */
+.sidebar-card { margin-bottom: 14px; }
+
+.metric-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  font-size: 12px;
+}
+.metric-row:last-child { border: none; }
+.metric-label { color: var(--text-dim); }
+.metric-val { font-family: 'Share Tech Mono', monospace; color: var(--cyan); }
+.metric-val.green { color: var(--green); }
+.metric-val.amber { color: var(--amber); }
+.metric-val.red { color: var(--red); }
+
+/* ── PROJECT PILLS ── */
+.proj-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  font-size: 12px;
+  cursor: default;
+}
+.proj-item:last-child { border: none; }
+.proj-dot-w { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.proj-dot-w.live { background: var(--green); box-shadow: 0 0 6px var(--green); }
+.proj-dot-w.dev { background: var(--purple); box-shadow: 0 0 6px var(--purple); }
+.proj-name { flex: 1; }
+.proj-pct {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 10px;
+  color: var(--text-dim);
+}
+
+/* ── PROGRESS BAR ── */
+.progress-bar {
+  height: 3px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 2px;
+  margin-top: 4px;
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--cyan), var(--green));
+  transition: width 1s ease;
+}
+
+/* ── RULES SECTION ── */
+.rule-item {
+  display: flex;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.rule-item:last-child { border: none; }
+.rule-num {
+  font-family: 'Share Tech Mono', monospace;
+  color: var(--cyan);
+  font-size: 11px;
+  min-width: 22px;
+  padding-top: 1px;
+}
+.rule-text { color: var(--text); }
+.rule-text strong { color: var(--amber); }
+
+/* ── ROUTING DIAGRAM ── */
+.routing-flow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 16px;
+  flex-wrap: wrap;
+}
+.flow-node {
+  text-align: center;
+  padding: 10px 16px;
+  border-radius: 6px;
+  border: 1px solid;
+  min-width: 120px;
+}
+.flow-node.t0 { border-color: var(--green); background: rgba(0,255,136,0.05); }
+.flow-node.t1 { border-color: var(--blue); background: rgba(77,159,255,0.05); }
+.flow-node.t2 { border-color: var(--purple); background: rgba(176,106,255,0.05); }
+.flow-node.t3 { border-color: var(--red); background: rgba(255,60,90,0.05); }
+.flow-node .fn { font-family:'Orbitron',monospace; font-size: 10px; font-weight: 700; }
+.flow-node.t0 .fn { color: var(--green); }
+.flow-node.t1 .fn { color: var(--blue); }
+.flow-node.t2 .fn { color: var(--purple); }
+.flow-node.t3 .fn { color: var(--red); }
+.flow-node .fm { font-size: 10px; color: var(--text-dim); margin-top: 2px; }
+.flow-arrow { color: var(--text-dim); font-size: 18px; }
+
+/* ── INFRA GRID ── */
+.infra-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+.infra-cat { font-family:'Orbitron',monospace; font-size: 9px; letter-spacing: 1px; color: var(--text-dim); margin-bottom: 6px; }
+.infra-items { display: flex; flex-direction: column; gap: 3px; }
+.infra-item { font-size: 11px; color: var(--text); display: flex; align-items: center; gap: 6px; }
+.infra-item::before { content:'▸'; color: var(--cyan); font-size: 10px; }
+
+/* ── STEP GUIDE ── */
+.steps-list { display: flex; flex-direction: column; gap: 8px; }
+.step-item {
+  display: flex;
+  gap: 12px;
+  padding: 10px 12px;
+  background: rgba(0,245,255,0.02);
+  border-left: 2px solid var(--border);
+  border-radius: 0 6px 6px 0;
+  font-size: 12px;
+  transition: border-color 0.2s;
+}
+.step-item:hover { border-left-color: var(--cyan); }
+.step-n {
+  font-family: 'Share Tech Mono', monospace;
+  color: var(--cyan);
+  font-size: 14px;
+  font-weight: 700;
+  min-width: 24px;
+}
+.step-body { flex: 1; }
+.step-title { font-weight: 700; color: var(--text); font-size: 13px; margin-bottom: 2px; }
+.step-desc { color: var(--text-dim); line-height: 1.5; }
+.step-status {
+  font-size: 9px;
+  font-family: 'Share Tech Mono', monospace;
+  padding: 2px 8px;
+  border-radius: 99px;
+  align-self: flex-start;
+}
+.ss-done { background: rgba(0,255,136,0.1); color: var(--green); border: 1px solid rgba(0,255,136,0.3); }
+.ss-now { background: rgba(255,183,0,0.1); color: var(--amber); border: 1px solid rgba(255,183,0,0.3); animation: blink 1.5s infinite; }
+.ss-next { background: rgba(90,122,154,0.1); color: var(--text-dim); border: 1px solid rgba(90,122,154,0.2); }
+
+/* ── MEMORY / LOG ── */
+.log-line {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 10px;
+  padding: 3px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+  display: flex;
+  gap: 8px;
+}
+.log-time { color: var(--text-dim); }
+.log-msg { color: var(--text); }
+.log-msg.ok { color: var(--green); }
+.log-msg.warn { color: var(--amber); }
+.log-msg.info { color: var(--cyan); }
+
+/* ── FULL-WIDTH ── */
+.full { grid-column: 1 / -1; }
+.col-2 { grid-column: span 2; }
+
+/* ── ANIMATIONS ── */
+@keyframes pulse {
+  0%,100% { opacity:1; transform:scale(1); }
+  50% { opacity:0.4; transform:scale(0.8); }
+}
+@keyframes orbit-glow {
+  0%,100% { box-shadow: 0 0 30px rgba(0,245,255,0.2), inset 0 0 30px rgba(0,245,255,0.05); }
+  50% { box-shadow: 0 0 50px rgba(0,245,255,0.35), inset 0 0 40px rgba(0,245,255,0.08); }
+}
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+@keyframes blink {
+  0%,100% { opacity:1; }
+  50% { opacity:0.4; }
+}
+@keyframes fadeIn {
+  from { opacity:0; transform:translateY(10px); }
+  to { opacity:1; transform:translateY(0); }
+}
+
+.panel.active > * { animation: fadeIn 0.3s ease; }
+
+/* ── RESPONSIVE ── */
+@media(max-width:1100px){
+  .main { grid-template-columns: 1fr 1fr; }
+  .tiers-grid { grid-template-columns: repeat(2,1fr); }
+}
+@media(max-width:700px){
+  .main { grid-template-columns: 1fr; }
+  .tiers-grid { grid-template-columns: 1fr; }
+}
+
+.section-label {
+  font-family: 'Orbitron', monospace;
+  font-size: 9px;
+  letter-spacing: 2px;
+  color: var(--text-dim);
+  text-align: center;
+  padding: 8px 0;
+  text-transform: uppercase;
+}
+
+.divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--border-bright), transparent);
+  margin: 12px 0;
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">🦅 <span>FALCO</span></div>
+  <div>
+    <div class="header-sub">MISSION CONTROL — GAVIOLI CORP</div>
+  </div>
+  <div class="header-right">
+    <div class="status-pill online"><div class="dot"></div> GATEWAY ONLINE</div>
+    <div class="status-pill online" style="border-color:var(--green);color:var(--green)"><div class="dot" style="background:var(--green)"></div> MEMORY LIVE</div>
+    <div id="clock"></div>
+  </div>
+</header>
+
+<div class="nav-tabs">
+  <div class="tab active" onclick="showPanel('overview')">OVERVIEW</div>
+  <div class="tab" onclick="showPanel('agents')">AGENTES</div>
+  <div class="tab" onclick="showPanel('routing')">ROTEAMENTO</div>
+  <div class="tab" onclick="showPanel('projects')">PROJETOS</div>
+  <div class="tab" onclick="showPanel('rules')">REGRAS</div>
+  <div class="tab" onclick="showPanel('roadmap')">ROADMAP</div>
+  <div class="tab" onclick="showPanel('infra')">INFRA</div>
+</div>
+
+<div class="main" id="mainGrid">
+
+  <!-- ═══════════════ PANEL: OVERVIEW ═══════════════ -->
+  <div class="panel active" id="panel-overview">
+
+    <!-- LEFT -->
+    <div>
+      <div class="card sidebar-card">
+        <div class="card-header">📊 SISTEMA</div>
+        <div class="card-body">
+          <div class="metric-row"><span class="metric-label">Gateway</span><span class="metric-val green">ONLINE</span></div>
+          <div class="metric-row"><span class="metric-label">Memória</span><span class="metric-val green">LIVE</span></div>
+          <div class="metric-row"><span class="metric-label">LM Studio</span><span class="metric-val amber">HOME ONLY</span></div>
+          <div class="metric-row"><span class="metric-label">Gemini</span><span class="metric-val green">LIVE</span></div>
+          <div class="metric-row"><span class="metric-label">Claude Sonnet</span><span class="metric-val green">LIVE</span></div>
+          <div class="metric-row"><span class="metric-label">Claude Opus</span><span class="metric-val green">LIVE</span></div>
+          <div class="metric-row"><span class="metric-label">gh CLI</span><span class="metric-val amber">PENDENTE</span></div>
+          <div class="metric-row"><span class="metric-label">GitHub SSH</span><span class="metric-val green">LIVE</span></div>
+        </div>
+      </div>
+
+      <div class="card sidebar-card">
+        <div class="card-header">⚙️ ROTEAMENTO</div>
+        <div class="card-body">
+          <div class="metric-row"><span class="metric-label">Primary</span><span class="metric-val green">LM Studio</span></div>
+          <div class="metric-row"><span class="metric-label">Fallback 1</span><span class="metric-val" style="color:var(--blue)">Gemini</span></div>
+          <div class="metric-row"><span class="metric-label">Fallback 2</span><span class="metric-val" style="color:var(--purple)">Sonnet</span></div>
+          <div class="metric-row"><span class="metric-label">Fallback 3</span><span class="metric-val" style="color:var(--red)">Opus</span></div>
+          <div class="metric-row"><span class="metric-label">Compaction</span><span class="metric-val green">Gemini (silent)</span></div>
+          <div class="metric-row"><span class="metric-label">Auto-restart</span><span class="metric-val green">systemd ✅</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CENTER -->
+    <div class="center">
+      <div class="card">
+        <div class="card-header">🦅 NÚCLEO — FALCO COMMAND</div>
+        <div class="card-body">
+          <div class="core-node">
+            <div class="core-emoji">🦅</div>
+            <div class="core-name">FALCO</div>
+            <div class="core-role">GERENTE GERAL</div>
+          </div>
+          <div class="section-label">cadeia de comando: CEO decide → Falco executa</div>
+          <div class="tiers-grid">
+            <div class="tier t0">
+              <div class="tier-head">
+                <div class="tier-info">
+                  <div class="tier-num">TIER 0 — PRIMARY</div>
+                  <div class="tier-name">LM Studio</div>
+                  <div class="tier-model">Qwen 2.5 Coder · LOCAL</div>
+                </div>
+                <span class="badge b-live">LIVE</span>
+              </div>
+              <div class="tier-cost">R$ 0,00 — GRÁTIS</div>
+            </div>
+            <div class="tier t1">
+              <div class="tier-head">
+                <div class="tier-info">
+                  <div class="tier-num">TIER 1 — FALLBACK 1</div>
+                  <div class="tier-name">Gemini 3.1 Pro</div>
+                  <div class="tier-model">Google · API</div>
+                </div>
+                <span class="badge b-live">LIVE</span>
+              </div>
+              <div class="tier-cost">baixo custo</div>
+            </div>
+            <div class="tier t2">
+              <div class="tier-head">
+                <div class="tier-info">
+                  <div class="tier-num">TIER 2 — FALLBACK 2</div>
+                  <div class="tier-name">Claude Sonnet</div>
+                  <div class="tier-model">Anthropic · CLI</div>
+                </div>
+                <span class="badge b-live">LIVE</span>
+              </div>
+              <div class="tier-cost">custo médio</div>
+            </div>
+            <div class="tier t3">
+              <div class="tier-head">
+                <div class="tier-info">
+                  <div class="tier-num">TIER 3 — RESERVA</div>
+                  <div class="tier-name">Claude Opus</div>
+                  <div class="tier-model">Anthropic · Máximo</div>
+                </div>
+                <span class="badge b-live">LIVE</span>
+              </div>
+              <div class="tier-cost">alto custo — usar com parcimônia</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT -->
+    <div>
+      <div class="card sidebar-card">
+        <div class="card-header">🚀 PROJETOS ATIVOS</div>
+        <div class="card-body">
+          <div class="proj-item">
+            <div class="proj-dot-w live"></div>
+            <div class="proj-name">⚽ Placar Analítico Pro</div>
+            <div class="proj-pct">85%</div>
+          </div>
+          <div class="progress-bar"><div class="progress-fill" style="width:85%"></div></div>
+          <div style="height:8px"></div>
+          <div class="proj-item">
+            <div class="proj-dot-w live"></div>
+            <div class="proj-name">🎵 Gavioli Records</div>
+            <div class="proj-pct">60%</div>
+          </div>
+          <div class="progress-bar"><div class="progress-fill" style="width:60%"></div></div>
+          <div style="height:8px"></div>
+          <div class="proj-item">
+            <div class="proj-dot-w dev"></div>
+            <div class="proj-name">🦺 Checklist ST</div>
+            <div class="proj-pct">30%</div>
+          </div>
+          <div class="progress-bar"><div class="progress-fill" style="width:30%;background:linear-gradient(90deg,var(--purple),var(--blue))"></div></div>
+          <div style="height:8px"></div>
+          <div class="proj-item">
+            <div class="proj-dot-w dev"></div>
+            <div class="proj-name">📈 Forex Robot</div>
+            <div class="proj-pct">20%</div>
+          </div>
+          <div class="progress-bar"><div class="progress-fill" style="width:20%;background:linear-gradient(90deg,var(--purple),var(--blue))"></div></div>
+          <div style="height:8px"></div>
+          <div class="proj-item">
+            <div class="proj-dot-w dev"></div>
+            <div class="proj-name">💊 Produto Nutricional</div>
+            <div class="proj-pct">10%</div>
+          </div>
+          <div class="progress-bar"><div class="progress-fill" style="width:10%;background:linear-gradient(90deg,var(--purple),var(--blue))"></div></div>
+        </div>
+      </div>
+
+      <div class="card sidebar-card">
+        <div class="card-header">📝 LOG RECENTE</div>
+        <div class="card-body">
+          <div class="log-line"><span class="log-time">2026-06-09</span><span class="log-msg ok">GitHub SSH ✅ configurado</span></div>
+          <div class="log-line"><span class="log-time">2026-06-09</span><span class="log-msg ok">falco-hub → GitHub Pages ✅</span></div>
+          <div class="log-line"><span class="log-time">2026-06-09</span><span class="log-msg ok">Roteamento LM Studio→Gemini→Sonnet→Opus ✅</span></div>
+          <div class="log-line"><span class="log-time">2026-06-09</span><span class="log-msg ok">Compaction silenciosa via Gemini ✅</span></div>
+          <div class="log-line"><span class="log-time">2026-06-09</span><span class="log-msg ok">systemd auto-restart ✅</span></div>
+          <div class="log-line"><span class="log-time">2026-06-09</span><span class="log-msg warn">gh CLI auth pendente</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ PANEL: AGENTES ═══════════════ -->
+  <div class="panel" id="panel-agents">
+    <div class="full">
+      <div class="card">
+        <div class="card-header">🤖 TODOS OS AGENTES — STATUS COMPLETO</div>
+        <div class="card-body">
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px">
+
+            <div>
+              <div class="section-label" style="color:var(--green)">▸ TIER 0 — LM STUDIO (LOCAL)</div>
+              <div class="agent-list">
+                <div class="agent-row"><span class="agent-icon">✍️</span><div class="agent-name-col"><div class="agent-n">Copywriter Básico</div><div class="agent-r">Textos simples, legendas, templates</div></div><span class="badge b-live">LIVE</span></div>
+                <div class="agent-row"><span class="agent-icon">📄</span><div class="agent-name-col"><div class="agent-n">Template Creator</div><div class="agent-r">Cria templates reutilizáveis</div></div><span class="badge b-plan">PLAN</span></div>
+                <div class="agent-row"><span class="agent-icon">📋</span><div class="agent-name-col"><div class="agent-n">Draft Writer</div><div class="agent-r">Primeiras versões de documentos</div></div><span class="badge b-plan">PLAN</span></div>
+              </div>
+            </div>
+
+            <div>
+              <div class="section-label" style="color:var(--blue)">▸ TIER 1 — GEMINI</div>
+              <div class="agent-list">
+                <div class="agent-row"><span class="agent-icon">📊</span><div class="agent-name-col"><div class="agent-n">ANALYST</div><div class="agent-r">Pesquisa e estratégia de mercado</div></div><span class="badge b-setup">SETUP</span></div>
+                <div class="agent-row"><span class="agent-icon">📅</span><div class="agent-name-col"><div class="agent-n">PROJECT MANAGER</div><div class="agent-r">Planejamento e orquestração</div></div><span class="badge b-setup">SETUP</span></div>
+                <div class="agent-row"><span class="agent-icon">🎯</span><div class="agent-name-col"><div class="agent-n">PRODUCT OWNER</div><div class="agent-r">Priorização e backlog</div></div><span class="badge b-plan">PLAN</span></div>
+                <div class="agent-row"><span class="agent-icon">🔄</span><div class="agent-name-col"><div class="agent-n">SCRUM MASTER</div><div class="agent-r">Gestão de tarefas e sprints</div></div><span class="badge b-plan">PLAN</span></div>
+                <div class="agent-row"><span class="agent-icon">🎵</span><div class="agent-name-col"><div class="agent-n">Content Creator</div><div class="agent-r">Posts Gavioli Records</div></div><span class="badge b-setup">SETUP</span></div>
+                <div class="agent-row"><span class="agent-icon">🏥</span><div class="agent-name-col"><div class="agent-n">Health Writer</div><div class="agent-r">Conteúdo produto nutricional</div></div><span class="badge b-plan">PLAN</span></div>
+              </div>
+            </div>
+
+            <div>
+              <div class="section-label" style="color:var(--purple)">▸ TIER 2 — CLAUDE SONNET</div>
+              <div class="agent-list">
+                <div class="agent-row"><span class="agent-icon">🏗️</span><div class="agent-name-col"><div class="agent-n">ARCHITECT</div><div class="agent-r">Design de sistemas</div></div><span class="badge b-live">LIVE</span></div>
+                <div class="agent-row"><span class="agent-icon">💻</span><div class="agent-name-col"><div class="agent-n">DEVELOPER</div><div class="agent-r">Programação e implementação</div></div><span class="badge b-live">LIVE</span></div>
+                <div class="agent-row"><span class="agent-icon">🔍</span><div class="agent-name-col"><div class="agent-n">ROOTCAUSE</div><div class="agent-r">Diagnóstico de bugs e falhas</div></div><span class="badge b-live">LIVE</span></div>
+                <div class="agent-row"><span class="agent-icon">🎨</span><div class="agent-name-col"><div class="agent-n">UX DESIGNER</div><div class="agent-r">Interfaces e dashboards</div></div><span class="badge b-setup">SETUP</span></div>
+                <div class="agent-row"><span class="agent-icon">🧪</span><div class="agent-name-col"><div class="agent-n">QA TESTER</div><div class="agent-r">Testes e qualidade</div></div><span class="badge b-setup">SETUP</span></div>
+                <div class="agent-row"><span class="agent-icon">🚀</span><div class="agent-name-col"><div class="agent-n">DEVOPS</div><div class="agent-r">Deploy e infraestrutura</div></div><span class="badge b-setup">SETUP</span></div>
+                <div class="agent-row"><span class="agent-icon">🗄️</span><div class="agent-name-col"><div class="agent-n">DATA ENGINEER</div><div class="agent-r">Banco de dados e pipelines</div></div><span class="badge b-setup">SETUP</span></div>
+                <div class="agent-row"><span class="agent-icon">🦺</span><div class="agent-name-col"><div class="agent-n">Checklist ST Agent</div><div class="agent-r">Imagem → NR → multa</div></div><span class="badge b-setup">SETUP</span></div>
+              </div>
+            </div>
+
+            <div>
+              <div class="section-label" style="color:var(--red)">▸ TIER 3 — CLAUDE OPUS</div>
+              <div class="agent-list">
+                <div class="agent-row"><span class="agent-icon">🧠</span><div class="agent-name-col"><div class="agent-n">Strategic Planner</div><div class="agent-r">Decisões de alto impacto</div></div><span class="badge b-live">LIVE</span></div>
+                <div class="agent-row"><span class="agent-icon">📈</span><div class="agent-name-col"><div class="agent-n">Forex Strategy Advisor</div><div class="agent-r">XAUUSD · FImathe · MT5</div></div><span class="badge b-setup">SETUP</span></div>
+                <div class="agent-row"><span class="agent-icon">⚔️</span><div class="agent-name-col"><div class="agent-n">CONCLAVE CRÍTICO</div><div class="agent-r">Audita lógica e falhas</div></div><span class="badge b-plan">PLAN</span></div>
+                <div class="agent-row"><span class="agent-icon">⚖️</span><div class="agent-name-col"><div class="agent-n">CONCLAVE ADVOGADO</div><div class="agent-r">Advocatus diaboli</div></div><span class="badge b-plan">PLAN</span></div>
+                <div class="agent-row"><span class="agent-icon">🧬</span><div class="agent-name-col"><div class="agent-n">CONCLAVE SINTETIZADOR</div><div class="agent-r">Integra a melhor solução</div></div><span class="badge b-plan">PLAN</span></div>
+              </div>
+            </div>
+
+          </div>
+
+          <div class="divider"></div>
+          <div style="display:flex;gap:20px;justify-content:center;flex-wrap:wrap;padding:8px 0">
+            <div style="display:flex;align-items:center;gap:6px;font-size:11px"><span class="badge b-live">LIVE</span> Funcionando agora</div>
+            <div style="display:flex;align-items:center;gap:6px;font-size:11px"><span class="badge b-setup">SETUP</span> Em configuração</div>
+            <div style="display:flex;align-items:center;gap:6px;font-size:11px"><span class="badge b-plan">PLAN</span> Planejado</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ PANEL: ROTEAMENTO ═══════════════ -->
+  <div class="panel" id="panel-routing">
+    <div class="full">
+      <div class="card">
+        <div class="card-header">⚡ ROTEAMENTO INTELIGENTE — COMO O FALCO DECIDE</div>
+        <div class="card-body">
+          <div class="routing-flow">
+            <div class="flow-node t0"><div class="fn">TIER 0</div><div class="fm">LM Studio</div><div class="fm" style="color:var(--green);font-size:9px">R$0 · LOCAL</div></div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-node t1"><div class="fn">TIER 1</div><div class="fm">Gemini 3.1</div><div class="fm" style="color:var(--blue);font-size:9px">BARATO</div></div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-node t2"><div class="fn">TIER 2</div><div class="fm">Claude Sonnet</div><div class="fm" style="color:var(--purple);font-size:9px">MÉDIO</div></div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-node t3"><div class="fn">TIER 3</div><div class="fm">Claude Opus</div><div class="fm" style="color:var(--red);font-size:9px">RESERVA</div></div>
+          </div>
+
+          <div class="divider"></div>
+          <div class="section-label">QUANDO CADA TIER É USADO</div>
+
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin-top:8px">
+            <div class="tier t0" style="padding:12px">
+              <div class="tier-name" style="margin-bottom:8px">🟢 TIER 0 — LM Studio (Qwen)</div>
+              <div style="font-size:11px;color:var(--text);line-height:1.8">
+                ✓ Rascunhos e templates<br>
+                ✓ Copywriting simples<br>
+                ✓ Tarefas repetitivas<br>
+                ✓ Legendas de posts<br>
+                ✓ Quando o PC está em casa
+              </div>
+            </div>
+            <div class="tier t1" style="padding:12px">
+              <div class="tier-name" style="margin-bottom:8px">🔵 TIER 1 — Gemini</div>
+              <div style="font-size:11px;color:var(--text);line-height:1.8">
+                ✓ Pesquisa na web<br>
+                ✓ Conteúdo Gavioli Records<br>
+                ✓ Gestão de projetos<br>
+                ✓ Produto Nutricional<br>
+                ✓ Quando LM Studio offline
+              </div>
+            </div>
+            <div class="tier t2" style="padding:12px">
+              <div class="tier-name" style="margin-bottom:8px">🟣 TIER 2 — Claude Sonnet</div>
+              <div style="font-size:11px;color:var(--text);line-height:1.8">
+                ✓ Placar Analítico Pro<br>
+                ✓ Programação complexa<br>
+                ✓ Análise de código<br>
+                ✓ Execução técnica diária<br>
+                ✓ Esta sessão atual
+              </div>
+            </div>
+            <div class="tier t3" style="padding:12px">
+              <div class="tier-name" style="margin-bottom:8px">🔴 TIER 3 — Claude Opus</div>
+              <div style="font-size:11px;color:var(--text);line-height:1.8">
+                ✓ Forex Robot (XAUUSD)<br>
+                ✓ Decisões estratégicas<br>
+                ✓ Arquitetura crítica<br>
+                ✓ Problemas impossíveis<br>
+                ✓ Usar com parcimônia
+              </div>
+            </div>
+          </div>
+
+          <div class="divider"></div>
+          <div class="section-label">FALLBACK — O QUE ACONTECE SE UM MODELO FALHAR</div>
+          <div style="text-align:center;padding:12px;font-size:12px;color:var(--text);line-height:2">
+            <span style="color:var(--green)">LM Studio offline</span> → <span style="color:var(--blue)">Gemini assume automaticamente</span><br>
+            <span style="color:var(--blue)">Gemini indisponível</span> → <span style="color:var(--purple)">Sonnet assume</span><br>
+            <span style="color:var(--purple)">Sonnet com problema</span> → <span style="color:var(--red)">Opus assume</span><br>
+            <span style="color:var(--text-dim)">Compactação necessária → Gemini faz o resumo silenciosamente</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ PANEL: PROJETOS ═══════════════ -->
+  <div class="panel" id="panel-projects">
+    <div class="full">
+      <div class="card">
+        <div class="card-header">🚀 PROJETOS ATIVOS — GAVIOLI CORP</div>
+        <div class="card-body">
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px">
+
+            <div class="card" style="border-color:rgba(0,255,136,0.3)">
+              <div class="card-header" style="color:var(--green)">⚽ PLACAR ANALÍTICO PRO</div>
+              <div class="card-body">
+                <div class="metric-row"><span class="metric-label">Status</span><span class="metric-val green">85% PRONTO</span></div>
+                <div class="progress-bar" style="margin:8px 0"><div class="progress-fill" style="width:85%"></div></div>
+                <div class="metric-row"><span class="metric-label">Stack</span><span class="metric-val">JS / Python / JSON</span></div>
+                <div class="metric-row"><span class="metric-label">Repo</span><span class="metric-val">lucasgavioli/placar-analitico</span></div>
+                <div class="metric-row"><span class="metric-label">Tier</span><span class="metric-val" style="color:var(--purple)">Claude Sonnet (TIER 2)</span></div>
+                <div class="divider"></div>
+                <div style="font-size:11px;color:var(--text-dim);line-height:1.8">
+                  ✅ Dashboard FM funcionando<br>
+                  ✅ Cores do clube OK<br>
+                  ✅ Radar com média da liga<br>
+                  ✅ Forma recente com toggle<br>
+                  ⏳ Gráfico de barras V/E/D pendente
+                </div>
+              </div>
+            </div>
+
+            <div class="card" style="border-color:rgba(77,159,255,0.3)">
+              <div class="card-header" style="color:var(--blue)">🎵 GAVIOLI RECORDS</div>
+              <div class="card-body">
+                <div class="metric-row"><span class="metric-label">Status</span><span class="metric-val" style="color:var(--blue)">EM SETUP</span></div>
+                <div class="metric-row"><span class="metric-label">Tier</span><span class="metric-val" style="color:var(--blue)">Gemini (TIER 1)</span></div>
+                <div class="divider"></div>
+                <div style="font-size:11px;color:var(--text-dim);margin-bottom:8px;font-weight:700;color:var(--text)">ROTEIRO SEMANAL:</div>
+                <div style="font-size:11px;color:var(--text-dim);line-height:2">
+                  <span style="color:var(--cyan)">Segunda:</span> chama a passada da sexta<br>
+                  <span style="color:var(--cyan)">Quarta/Quinta:</span> teaser da nova<br>
+                  <span style="color:var(--cyan)">Sexta -1h:</span> corte pré-refrão + refrão<br>
+                  <span style="color:var(--cyan)">Sexta +1h:</span> música completa<br>
+                  <span style="color:var(--cyan)">Domingo:</span> chama a que saiu na sexta
+                </div>
+              </div>
+            </div>
+
+            <div class="card" style="border-color:rgba(176,106,255,0.3)">
+              <div class="card-header" style="color:var(--purple)">🦺 CHECKLIST SEGURANÇA DO TRABALHO</div>
+              <div class="card-body">
+                <div class="metric-row"><span class="metric-label">Status</span><span class="metric-val" style="color:var(--purple)">EM DEV</span></div>
+                <div class="metric-row"><span class="metric-label">Tier</span><span class="metric-val" style="color:var(--purple)">Sonnet (TIER 2)</span></div>
+                <div class="divider"></div>
+                <div style="font-size:11px;color:var(--text-dim);line-height:2">
+                  📸 Análise de imagem<br>
+                  ⚠️ Identifica condição insegura<br>
+                  📋 Mapeia NR aplicável<br>
+                  💰 Calcula multa correspondente
+                </div>
+              </div>
+            </div>
+
+            <div class="card" style="border-color:rgba(255,60,90,0.3)">
+              <div class="card-header" style="color:var(--red)">📈 FOREX ROBOT (XAUUSD)</div>
+              <div class="card-body">
+                <div class="metric-row"><span class="metric-label">Status</span><span class="metric-val" style="color:var(--red)">EM DEV</span></div>
+                <div class="metric-row"><span class="metric-label">Tier</span><span class="metric-val" style="color:var(--red)">Claude Opus (TIER 3)</span></div>
+                <div class="divider"></div>
+                <div style="font-size:11px;color:var(--text-dim);line-height:2">
+                  Estratégia: FImathe<br>
+                  Par: XAUUSD (Ouro)<br>
+                  Plataforma: MT5 automatizado
+                </div>
+              </div>
+            </div>
+
+            <div class="card" style="border-color:rgba(255,183,0,0.3)">
+              <div class="card-header" style="color:var(--amber)">💊 PRODUTO NUTRICIONAL</div>
+              <div class="card-body">
+                <div class="metric-row"><span class="metric-label">Status</span><span class="metric-val amber">EM DEV</span></div>
+                <div class="metric-row"><span class="metric-label">Tier</span><span class="metric-val" style="color:var(--blue)">Gemini (TIER 1)</span></div>
+                <div class="divider"></div>
+                <div style="font-size:11px;color:var(--text-dim);line-height:2">
+                  Produto: Whey Protein<br>
+                  Público: Profissionais de saúde<br>
+                  Foco: Conteúdo técnico/científico
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ PANEL: REGRAS ═══════════════ -->
+  <div class="panel" id="panel-rules">
+    <div class="full">
+      <div class="card">
+        <div class="card-header">📜 REGRAS DO SISTEMA — PROTOCOLO FALCO</div>
+        <div class="card-body">
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:20px">
+
+            <div>
+              <div class="section-label">CADEIA DE COMANDO</div>
+              <div class="rule-item"><span class="rule-num">01</span><span class="rule-text"><strong>CEO Lucas decide a direção.</strong> Falco executa. Nunca o inverso.</span></div>
+              <div class="rule-item"><span class="rule-num">02</span><span class="rule-text"><strong>Executar antes de perguntar.</strong> Pesquisar, ler o arquivo, verificar — depois perguntar se travar.</span></div>
+              <div class="rule-item"><span class="rule-num">03</span><span class="rule-text"><strong>Ao concluir tarefa, documentar.</strong> Atualizar AGENTS.md, MEMORY.md ou arquivo relevante.</span></div>
+              <div class="rule-item"><span class="rule-num">04</span><span class="rule-text"><strong>Não exfiltrar dados privados.</strong> Jamais. Em nenhuma circunstância.</span></div>
+              <div class="rule-item"><span class="rule-num">05</span><span class="rule-text"><strong>Perguntar antes de ações externas.</strong> Emails, posts públicos, push para produção.</span></div>
+            </div>
+
+            <div>
+              <div class="section-label">ROTEAMENTO DE MODELOS</div>
+              <div class="rule-item"><span class="rule-num">R1</span><span class="rule-text"><strong>Sempre tenta o tier mais baixo que resolve.</strong> Sobe só quando necessário.</span></div>
+              <div class="rule-item"><span class="rule-num">R2</span><span class="rule-text"><strong>LM Studio = primary.</strong> Grátis, local, sempre disponível quando o PC está on.</span></div>
+              <div class="rule-item"><span class="rule-num">R3</span><span class="rule-text"><strong>Se um modelo falha, o próximo assume automaticamente</strong> — sem interromper o CEO.</span></div>
+              <div class="rule-item"><span class="rule-num">R4</span><span class="rule-text"><strong>Compactação silenciosa via Gemini.</strong> Quando contexto enche, Gemini resume em background.</span></div>
+              <div class="rule-item"><span class="rule-num">R5</span><span class="rule-text"><strong>Opus é reserva.</strong> Usar somente para Forex, decisões críticas, arquitetura complexa.</span></div>
+            </div>
+
+            <div>
+              <div class="section-label">MEMÓRIA E CONTINUIDADE</div>
+              <div class="rule-item"><span class="rule-num">M1</span><span class="rule-text"><strong>Sem "notas mentais".</strong> Se precisa lembrar → escreve no arquivo. Memória não sobrevive à sessão.</span></div>
+              <div class="rule-item"><span class="rule-num">M2</span><span class="rule-text"><strong>MEMORY.md = memória de longo prazo.</strong> Só no contexto principal — não em grupos/canais.</span></div>
+              <div class="rule-item"><span class="rule-num">M3</span><span class="rule-text"><strong>Daily notes:</strong> memory/YYYY-MM-DD.md para logs brutos de sessão.</span></div>
+              <div class="rule-item"><span class="rule-num">M4</span><span class="rule-text"><strong>Índice semântico:</strong> LM Studio nomic-embed-text indexa sessões automaticamente.</span></div>
+            </div>
+
+            <div>
+              <div class="section-label">INFRA E SEGURANÇA</div>
+              <div class="rule-item"><span class="rule-num">I1</span><span class="rule-text"><strong>trash &gt; rm.</strong> Recuperável é melhor que perdido para sempre.</span></div>
+              <div class="rule-item"><span class="rule-num">I2</span><span class="rule-text"><strong>Antes de alterar config ou cron</strong>, inspecionar estado atual e preservar/mesclar por padrão.</span></div>
+              <div class="rule-item"><span class="rule-num">I3</span><span class="rule-text"><strong>OpenClaw auto-restart</strong> via systemd — 5s de delay, max 5 tentativas/min.</span></div>
+              <div class="rule-item"><span class="rule-num">I4</span><span class="rule-text"><strong>GitHub SSH</strong> configurado — push/pull sem senha. Remote: git@github.com.</span></div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ PANEL: ROADMAP ═══════════════ -->
+  <div class="panel" id="panel-roadmap">
+    <div class="full">
+      <div class="card">
+        <div class="card-header">🗺️ ROADMAP — PASSO A PASSO DE IMPLANTAÇÃO</div>
+        <div class="card-body">
+          <div class="steps-list">
+
+            <div class="step-item">
+              <div class="step-n">01</div>
+              <div class="step-body">
+                <div class="step-title">GitHub SSH + Repositório</div>
+                <div class="step-desc">Chave SSH criada (testetestado), remote trocado pra SSH, push/pull funcionando. falco-hub publicado no GitHub Pages.</div>
+              </div>
+              <span class="step-status ss-done">✅ FEITO</span>
+            </div>
+
+            <div class="step-item">
+              <div class="step-n">02</div>
+              <div class="step-body">
+                <div class="step-title">Roteamento LM Studio → Gemini → Sonnet → Opus</div>
+                <div class="step-desc">Config atualizada. LM Studio como primary. Fallback automático. Compaction silenciosa via Gemini. Auto-restart via systemd.</div>
+              </div>
+              <span class="step-status ss-done">✅ FEITO</span>
+            </div>
+
+            <div class="step-item">
+              <div class="step-n">03</div>
+              <div class="step-body">
+                <div class="step-title">Dashboard Mission Control (este arquivo)</div>
+                <div class="step-desc">Painel interativo com todos os agentes, regras, projetos, roteamento e roadmap. Publicado no GitHub Pages.</div>
+              </div>
+              <span class="step-status ss-done">✅ FEITO</span>
+            </div>
+
+            <div class="step-item">
+              <div class="step-n">04</div>
+              <div class="step-body">
+                <div class="step-title">gh CLI — Autenticação Completa</div>
+                <div class="step-desc">Criar token clássico com escopos: repo, read:org, workflow. Rodar gh auth login --with-token. Habilita PRs, Issues e GitHub Actions pelo terminal.</div>
+              </div>
+              <span class="step-status ss-now">⏳ PRÓXIMO</span>
+            </div>
+
+            <div class="step-item">
+              <div class="step-n">05</div>
+              <div class="step-body">
+                <div class="step-title">Testar Fallback em Produção</div>
+                <div class="step-desc">Derrubar LM Studio e confirmar que Gemini assume. Derrubar Gemini e confirmar que Sonnet assume. Garantir que nenhuma sessão morre.</div>
+              </div>
+              <span class="step-status ss-next">PLAN</span>
+            </div>
+
+            <div class="step-item">
+              <div class="step-n">06</div>
+              <div class="step-body">
+                <div class="step-title">Automação Gavioli Records</div>
+                <div class="step-desc">Agente Content Creator no Gemini. Roteiro semanal automatizado: segunda/quarta/sexta/domingo. TikTok + YouTube + Kwai.</div>
+              </div>
+              <span class="step-status ss-next">PLAN</span>
+            </div>
+
+            <div class="step-item">
+              <div class="step-n">07</div>
+              <div class="step-body">
+                <div class="step-title">Checklist Segurança do Trabalho</div>
+                <div class="step-desc">Pipeline: imagem → visão computacional → identificação de condição insegura → mapeamento de NR → cálculo de multa.</div>
+              </div>
+              <span class="step-status ss-next">PLAN</span>
+            </div>
+
+            <div class="step-item">
+              <div class="step-n">08</div>
+              <div class="step-body">
+                <div class="step-title">Backup E: → Google Drive / OneDrive</div>
+                <div class="step-desc">rclone + cron para sync automático da pasta /mnt/e/PROJETOS/ na nuvem. Evitar perda dos 5 projetos.</div>
+              </div>
+              <span class="step-status ss-next">PLAN</span>
+            </div>
+
+            <div class="step-item">
+              <div class="step-n">09</div>
+              <div class="step-body">
+                <div class="step-title">OpenClaw em VPS (24/7)</div>
+                <div class="step-desc">Migrar o gateway para um servidor na nuvem. Falco sempre online, independente do PC de casa estar ligado.</div>
+              </div>
+              <span class="step-status ss-next">PLAN</span>
+            </div>
+
+            <div class="step-item">
+              <div class="step-n">10</div>
+              <div class="step-body">
+                <div class="step-title">Conclave — Mega-Brain</div>
+                <div class="step-desc">3 agentes Claude Opus debatendo decisões críticas: Crítico (analisa falhas) + Advogado (ataca o plano) + Sintetizador (melhor solução).</div>
+              </div>
+              <span class="step-status ss-next">PLAN</span>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ PANEL: INFRA ═══════════════ -->
+  <div class="panel" id="panel-infra">
+    <div class="full">
+      <div class="card">
+        <div class="card-header">☁️ INFRAESTRUTURA — FERRAMENTAS & PLATAFORMAS</div>
+        <div class="card-body">
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px">
+
+            <div class="card" style="border-color:var(--border)">
+              <div class="card-header">🗄️ BANCOS DE DADOS</div>
+              <div class="card-body">
+                <div class="agent-row"><span class="agent-icon">🔥</span><div class="agent-name-col"><div class="agent-n">Firestore</div><div class="agent-r">Firebase NoSQL cloud</div></div><span class="badge b-plan">PLAN</span></div>
+                <div class="agent-row"><span class="agent-icon">📌</span><div class="agent-name-col"><div class="agent-n">PineCone</div><div class="agent-r">Vector DB</div></div><span class="badge b-plan">PLAN</span></div>
+                <div class="agent-row"><span class="agent-icon">🐘</span><div class="agent-name-col"><div class="agent-n">PgVector</div><div class="agent-r">PostgreSQL + vetorial</div></div><span class="badge b-plan">PLAN</span></div>
+                <div class="agent-row"><span class="agent-icon">🧮</span><div class="agent-name-col"><div class="agent-n">ChromaDB</div><div class="agent-r">Embeddings local</div></div><span class="badge b-plan">PLAN</span></div>
+              </div>
+            </div>
+
+            <div class="card" style="border-color:var(--border)">
+              <div class="card-header">⚙️ BACKEND</div>
+              <div class="card-body">
+                <div class="agent-row"><span class="agent-icon">🐍</span><div class="agent-name-col"><div class="agent-n">FastAPI</div><div class="agent-r">Backend Python</div></div><span class="badge b-plan">PLAN</span></div>
+                <div class="agent-row"><span class="agent-icon">🔥</span><div class="agent-name-col"><div class="agent-n">Firebase Functions</div><div class="agent-r">Serverless</div></div><span class="badge b-plan">PLAN</span></div>
+                <div class="agent-row"><span class="agent-icon">🐳</span><div class="agent-name-col"><div class="agent-n">Cloud Run</div><div class="agent-r">Containers GCP</div></div><span class="badge b-plan">PLAN</span></div>
+                <div class="agent-row"><span class="agent-icon">⚡</span><div class="agent-name-col"><div class="agent-n">ExpressJS</div><div class="agent-r">Node.js API</div></div><span class="badge b-plan">PLAN</span></div>
+              </div>
+            </div>
+
+            <div class="card" style="border-color:var(--border)">
+              <div class="card-header">🤖 AUTOMAÇÃO</div>
+              <div class="card-body">
+                <div class="agent-row"><span class="agent-icon">🔄</span><div class="agent-name-col"><div class="agent-n">n8n</div><div class="agent-r">Fluxos — prioridade</div></div><span class="badge b-setup">SETUP</span></div>
+                <div class="agent-row"><span class="agent-icon">⚙️</span><div class="agent-name-col"><div class="agent-n">Make</div><div class="agent-r">Automação visual</div></div><span class="badge b-plan">PLAN</span></div>
+                <div class="agent-row"><span class="agent-icon">⚡</span><div class="agent-name-col"><div class="agent-n">Zapier</div><div class="agent-r">Integrações rápidas</div></div><span class="badge b-plan">PLAN</span></div>
+                <div class="agent-row"><span class="agent-icon">🕷️</span><div class="agent-name-col"><div class="agent-n">Apify</div><div class="agent-r">Web scraping</div></div><span class="badge b-plan">PLAN</span></div>
+              </div>
+            </div>
+
+            <div class="card" style="border-color:var(--border)">
+              <div class="card-header">🎨 CRIAÇÃO DE CONTEÚDO</div>
+              <div class="card-body">
+                <div class="agent-row"><span class="agent-icon">🎙️</span><div class="agent-name-col"><div class="agent-n">ElevenLabs</div><div class="agent-r">TTS — voice</div></div><span class="badge b-plan">PLAN</span></div>
+                <div class="agent-row"><span class="agent-icon">🎬</span><div class="agent-name-col"><div class="agent-n">HeyGen</div><div class="agent-r">Vídeos com avatar</div></div><span class="badge b-plan">PLAN</span></div>
+                <div class="agent-row"><span class="agent-icon">🎵</span><div class="agent-name-col"><div class="agent-n">Suno AI</div><div class="agent-r">Música IA</div></div><span class="badge b-plan">PLAN</span></div>
+                <div class="agent-row"><span class="agent-icon">🎞️</span><div class="agent-name-col"><div class="agent-n">Kling / Runway</div><div class="agent-r">Vídeo IA</div></div><span class="badge b-plan">PLAN</span></div>
+              </div>
+            </div>
+
+            <div class="card" style="border-color:var(--border)">
+              <div class="card-header">☁️ CLOUD</div>
+              <div class="card-body">
+                <div class="agent-row"><span class="agent-icon">🔥</span><div class="agent-name-col"><div class="agent-n">Firebase</div><div class="agent-r">Hosting + DB</div></div><span class="badge b-setup">SETUP</span></div>
+                <div class="agent-row"><span class="agent-icon">⚡</span><div class="agent-name-col"><div class="agent-n">Supabase</div><div class="agent-r">PostgreSQL cloud</div></div><span class="badge b-plan">PLAN</span></div>
+                <div class="agent-row"><span class="agent-icon">🌐</span><div class="agent-name-col"><div class="agent-n">Google Cloud</div><div class="agent-r">Vertex AI + Run</div></div><span class="badge b-plan">PLAN</span></div>
+                <div class="agent-row"><span class="agent-icon">☁️</span><div class="agent-name-col"><div class="agent-n">GitHub Pages</div><div class="agent-r">falco-hub ativo</div></div><span class="badge b-live">LIVE</span></div>
+              </div>
+            </div>
+
+            <div class="card" style="border-color:var(--border)">
+              <div class="card-header">🖥️ LOCAL</div>
+              <div class="card-body">
+                <div class="agent-row"><span class="agent-icon">🧠</span><div class="agent-name-col"><div class="agent-n">LM Studio</div><div class="agent-r">Qwen 2.5 Coder 7B</div></div><span class="badge b-live">LIVE</span></div>
+                <div class="agent-row"><span class="agent-icon">📐</span><div class="agent-name-col"><div class="agent-n">nomic-embed-text</div><div class="agent-r">Memória semântica</div></div><span class="badge b-live">LIVE</span></div>
+                <div class="agent-row"><span class="agent-icon">🦅</span><div class="agent-name-col"><div class="agent-n">OpenClaw Gateway</div><div class="agent-r">WSL2 + systemd</div></div><span class="badge b-live">LIVE</span></div>
+                <div class="agent-row"><span class="agent-icon">💾</span><div class="agent-name-col"><div class="agent-n">Drive E: 112GB</div><div class="agent-r">5 projetos locais</div></div><span class="badge b-setup">SETUP</span></div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- end main -->
+
+<footer style="text-align:center;padding:16px;font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--text-dim);border-top:1px solid var(--border)">
+  GAVIOLI CORP · FALCO 🦅 · OPENCLAW · 2026 — MISSION CONTROL v1.0
+</footer>
+
+<script>
+// Clock
+function updateClock(){
+  const now = new Date();
+  const t = now.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  document.getElementById('clock').textContent = t;
+}
+updateClock();
+setInterval(updateClock, 1000);
+
+// Tab switching
+function showPanel(id){
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('panel-'+id).classList.add('active');
+  event.target.classList.add('active');
+}
+
+// Animate progress bars on load
+window.addEventListener('load', () => {
+  document.querySelectorAll('.progress-fill').forEach(bar => {
+    const w = bar.style.width;
+    bar.style.width = '0';
+    setTimeout(() => { bar.style.width = w; }, 300);
+  });
+});
+</script>
+</body>
+</html>
