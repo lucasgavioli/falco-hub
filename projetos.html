@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FALCO — Relatório de Projetos</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&family=Rajdhani:wght@300;400;600;700&display=swap');
+:root{
+  --cyan:#00f5ff;--green:#00ff88;--amber:#ffb700;--red:#ff3c5a;
+  --purple:#b06aff;--blue:#4d9fff;--orange:#ff6b2b;
+  --bg:#020810;--bg2:#060d1a;--bg3:#0a1628;
+  --border:rgba(0,245,255,0.12);--borderB:rgba(0,245,255,0.35);
+  --text:#c8e8ff;--dim:#5a7a9a;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--text);font-family:'Rajdhani',sans-serif;min-height:100vh;}
+body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.02) 2px,rgba(0,0,0,.02) 4px);pointer-events:none;z-index:1000;}
+
+header{background:linear-gradient(180deg,rgba(0,20,50,.95),rgba(2,8,16,.9));border-bottom:1px solid var(--borderB);padding:12px 24px;display:flex;align-items:center;gap:14px;position:sticky;top:0;z-index:100;backdrop-filter:blur(10px);}
+.logo{font-family:'Orbitron',monospace;font-size:17px;font-weight:900;color:var(--cyan);text-shadow:0 0 20px rgba(0,245,255,.6);letter-spacing:4px;}
+.logo span{color:var(--amber);}
+.back{margin-left:auto;font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--dim);text-decoration:none;padding:4px 10px;border:1px solid var(--border);border-radius:4px;transition:.2s;}
+.back:hover{border-color:var(--cyan);color:var(--cyan);}
+
+nav{display:flex;gap:2px;padding:0 24px;background:var(--bg2);border-bottom:1px solid var(--border);overflow-x:auto;}
+.tab{padding:9px 18px;font-family:'Orbitron',monospace;font-size:9px;font-weight:700;letter-spacing:2px;color:var(--dim);cursor:pointer;border-bottom:2px solid transparent;transition:.2s;white-space:nowrap;}
+.tab:hover{color:var(--cyan);}
+.tab.active{color:var(--cyan);border-bottom-color:var(--cyan);}
+.tab.focus{color:var(--green);border-bottom-color:var(--green);}
+.tab.focus.active{color:var(--green);border-bottom-color:var(--green);}
+
+.main{padding:20px 24px;max-width:1600px;margin:0 auto;}
+.panel{display:none;}
+.panel.active{display:block;animation:fadeIn .3s ease;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+@keyframes glow{0%,100%{box-shadow:0 0 20px rgba(0,245,255,.15)}50%{box-shadow:0 0 40px rgba(0,245,255,.35)}}
+
+/* FOCUS BANNER */
+.focus-banner{background:linear-gradient(135deg,rgba(0,255,136,.06),rgba(0,245,255,.03));border:1.5px solid rgba(0,255,136,.3);border-radius:10px;padding:14px 18px;display:flex;align-items:center;gap:14px;margin-bottom:18px;}
+.fb-icon{font-size:28px;}
+.fb-title{font-family:'Orbitron',monospace;font-size:13px;font-weight:900;color:var(--green);}
+.fb-sub{font-size:11px;color:var(--dim);margin-top:2px;}
+.fb-badge{margin-left:auto;font-family:'Share Tech Mono',monospace;font-size:10px;padding:4px 12px;border-radius:99px;background:rgba(0,255,136,.12);color:var(--green);border:1px solid rgba(0,255,136,.35);animation:pulse 2s infinite;}
+
+/* KANBAN */
+.kanban{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;}
+.kol{background:var(--bg2);border:1px solid var(--border);border-radius:8px;overflow:hidden;}
+.kol-head{padding:9px 12px;display:flex;align-items:center;gap:7px;border-bottom:1px solid var(--border);}
+.kol-title{font-family:'Orbitron',monospace;font-size:9px;font-weight:700;letter-spacing:2px;}
+.kol-count{font-family:'Share Tech Mono',monospace;font-size:9px;padding:1px 6px;border-radius:99px;}
+.kol-body{padding:8px;}
+.kcard{background:var(--bg3);border:1px solid rgba(255,255,255,.05);border-radius:6px;padding:8px 10px;margin-bottom:6px;cursor:default;transition:.15s;}
+.kcard:hover{border-color:rgba(255,255,255,.12);}
+.kcard:last-child{margin-bottom:0;}
+.kc-title{font-size:12px;font-weight:700;color:var(--text);margin-bottom:3px;}
+.kc-desc{font-size:10px;color:var(--dim);line-height:1.5;}
+.kc-tags{display:flex;flex-wrap:wrap;gap:3px;margin-top:5px;}
+.tag{padding:1px 6px;border-radius:99px;font-size:8px;font-family:'Share Tech Mono',monospace;border:1px solid;}
+
+/* DONE */
+.kol.done .kol-head{background:rgba(0,255,136,.04);}
+.kol.done .kol-title{color:var(--green);}
+.kol.done .kol-count{background:rgba(0,255,136,.1);color:var(--green);border:1px solid rgba(0,255,136,.2);}
+/* DOING */
+.kol.doing .kol-head{background:rgba(0,245,255,.04);}
+.kol.doing .kol-title{color:var(--cyan);}
+.kol.doing .kol-count{background:rgba(0,245,255,.1);color:var(--cyan);border:1px solid rgba(0,245,255,.2);}
+/* NEXT */
+.kol.next .kol-head{background:rgba(255,183,0,.04);}
+.kol.next .kol-title{color:var(--amber);}
+.kol.next .kol-count{background:rgba(255,183,0,.1);color:var(--amber);border:1px solid rgba(255,183,0,.2);}
+/* BACKLOG */
+.kol.backlog .kol-head{background:rgba(90,122,154,.04);}
+.kol.backlog .kol-title{color:var(--dim);}
+.kol.backlog .kol-count{background:rgba(90,122,154,.1);color:var(--dim);border:1px solid rgba(90,122,154,.2);}
+
+/* PLAN DO DIA */
+.plan-grid{display:grid;grid-template-columns:280px 1fr;gap:16px;}
+.timeline{display:flex;flex-direction:column;gap:0;}
+.tl-item{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.04);cursor:pointer;transition:.2s;}
+.tl-item:last-child{border:none;}
+.tl-item:hover{background:rgba(255,255,255,.02);border-radius:6px;padding-left:6px;}
+.tl-item.active-task{background:rgba(0,245,255,.03);border-radius:6px;padding-left:6px;}
+.tl-time{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--dim);min-width:44px;padding-top:2px;}
+.tl-dot{width:10px;height:10px;border-radius:50%;border:2px solid;margin-top:4px;min-width:10px;}
+.tl-body{flex:1;}
+.tl-title{font-size:12px;font-weight:700;color:var(--text);}
+.tl-desc{font-size:10px;color:var(--dim);margin-top:2px;line-height:1.5;}
+.tl-dur{font-family:'Share Tech Mono',monospace;font-size:9px;margin-top:3px;}
+.task-detail{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:18px;position:sticky;top:80px;}
+.td-header{margin-bottom:14px;}
+.td-title{font-family:'Orbitron',monospace;font-size:13px;font-weight:700;margin-bottom:4px;}
+.td-sub{font-size:11px;color:var(--dim);}
+.td-section{margin-bottom:14px;}
+.td-label{font-family:'Orbitron',monospace;font-size:8px;letter-spacing:2px;color:var(--dim);margin-bottom:6px;}
+.step{display:flex;gap:8px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.03);font-size:11px;}
+.step:last-child{border:none;}
+.step-num{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--dim);min-width:18px;}
+.step-text{color:var(--text);line-height:1.5;}
+
+/* OVERVIEW PROJETOS */
+.proj-overview{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px;}
+.po-card{background:var(--bg2);border:1.5px solid;border-radius:10px;overflow:hidden;transition:.2s;cursor:pointer;}
+.po-card:hover{transform:translateY(-4px);box-shadow:0 10px 40px rgba(0,0,0,.5);}
+.po-head{padding:12px 16px;display:flex;align-items:center;gap:12px;}
+.po-icon{font-size:26px;}
+.po-info{flex:1;}
+.po-name{font-family:'Orbitron',monospace;font-size:11px;font-weight:700;}
+.po-stack{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--dim);margin-top:2px;}
+.po-body{padding:12px 16px;border-top:1px solid rgba(255,255,255,.05);}
+.po-bar{height:5px;background:rgba(255,255,255,.06);border-radius:3px;margin:8px 0 12px;}
+.po-fill{height:100%;border-radius:3px;}
+.po-next{font-size:11px;color:var(--dim);line-height:1.7;}
+.po-next strong{color:var(--text);}
+
+@media(max-width:900px){.kanban{grid-template-columns:repeat(2,1fr)}.plan-grid{grid-template-columns:1fr}.task-detail{position:static}}
+@media(max-width:500px){.kanban{grid-template-columns:1fr}.proj-overview{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">🦅 <span>FALCO</span> <span style="color:var(--dim);font-size:12px;font-weight:400">/ PROJETOS</span></div>
+  <div id="clock" style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--cyan)"></div>
+  <a href="dashboard.html" class="back">← MISSION CONTROL</a>
+</header>
+
+<nav>
+  <div class="tab focus active" onclick="show('placar',this)">⚽ PLACAR — FOCO</div>
+  <div class="tab" onclick="show('overview',this)">TODOS OS PROJETOS</div>
+  <div class="tab" onclick="show('planodia',this)">PLANO DO DIA</div>
+</nav>
+
+<div class="main">
+
+<!-- ══════ PLACAR ANALÍTICO — FOCO ══════ -->
+<div class="panel active" id="panel-placar">
+
+  <div class="focus-banner">
+    <span class="fb-icon">⚽</span>
+    <div>
+      <div class="fb-title">PLACAR ANALÍTICO PRO — FOCO ATUAL</div>
+      <div class="fb-sub">Premier League Analytics · JS/Python/JSON · github.com/lucasgavioli/placar-analitico</div>
+    </div>
+    <div class="fb-badge">🎯 85% → 100%</div>
+  </div>
+
+  <div style="margin-bottom:8px">
+    <div style="height:8px;background:rgba(255,255,255,.06);border-radius:4px;overflow:hidden">
+      <div style="height:100%;width:85%;background:linear-gradient(90deg,var(--cyan),var(--green));border-radius:4px;position:relative">
+        <div style="position:absolute;right:0;top:0;bottom:0;width:15%;background:repeating-linear-gradient(45deg,transparent,transparent 3px,rgba(255,255,255,.08) 3px,rgba(255,255,255,.08) 6px)"></div>
+      </div>
+    </div>
+    <div style="display:flex;justify-content:space-between;font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--dim);margin-top:4px"><span>0%</span><span style="color:var(--green)">85% atual</span><span>100% meta</span></div>
+  </div>
+
+  <div class="kanban">
+
+    <!-- FEITO -->
+    <div class="kol done">
+      <div class="kol-head">
+        <div class="kol-title">FEITO</div>
+        <span class="kol-count">8</span>
+      </div>
+      <div class="kol-body">
+        <div class="kcard">
+          <div class="kc-title">Dashboard principal FM</div>
+          <div class="kc-desc">Seletor de clube, cores dinâmicas por time</div>
+          <div class="kc-tags"><span class="tag" style="border-color:rgba(0,255,136,.3);color:var(--green)">JS</span><span class="tag" style="border-color:rgba(0,255,136,.3);color:var(--green)">UI</span></div>
+        </div>
+        <div class="kcard">
+          <div class="kc-title">Radar com média da liga</div>
+          <div class="kc-desc">Comparativo clube vs média PL</div>
+          <div class="kc-tags"><span class="tag" style="border-color:rgba(0,255,136,.3);color:var(--green)">Chart.js</span></div>
+        </div>
+        <div class="kcard">
+          <div class="kc-title">Forma recente — toggle</div>
+          <div class="kc-desc">Botões GRÁFICO / DETALHES com alternância</div>
+          <div class="kc-tags"><span class="tag" style="border-color:rgba(0,255,136,.3);color:var(--green)">UI</span><span class="tag" style="border-color:rgba(0,255,136,.3);color:var(--green)">JS</span></div>
+        </div>
+        <div class="kcard">
+          <div class="kc-title">CASA vs FORA comparativo</div>
+          <div class="kc-desc">Movido para dentro do toggle DESEMPENHO</div>
+          <div class="kc-tags"><span class="tag" style="border-color:rgba(0,255,136,.3);color:var(--green)">UX</span></div>
+        </div>
+        <div class="kcard">
+          <div class="kc-title">Dados Premier League</div>
+          <div class="kc-desc">JSON com estatísticas dos clubes</div>
+          <div class="kc-tags"><span class="tag" style="border-color:rgba(0,255,136,.3);color:var(--green)">Python</span><span class="tag" style="border-color:rgba(0,255,136,.3);color:var(--green)">JSON</span></div>
+        </div>
+        <div class="kcard">
+          <div class="kc-title">Pipeline de dados</div>
+          <div class="kc-desc">Scraping / API → JSON estruturado</div>
+          <div class="kc-tags"><span class="tag" style="border-color:rgba(0,255,136,.3);color:var(--green)">Python</span></div>
+        </div>
+        <div class="kcard">
+          <div class="kc-title">Responsividade base</div>
+          <div class="kc-desc">Layout adaptável para telas menores</div>
+          <div class="kc-tags"><span class="tag" style="border-color:rgba(0,255,136,.3);color:var(--green)">CSS</span></div>
+        </div>
+        <div class="kcard">
+          <div class="kc-title">Deploy GitHub Pages</div>
+          <div class="kc-desc">Branch main sincronizado via SSH</div>
+          <div class="kc-tags"><span class="tag" style="border-color:rgba(0,255,136,.3);color:var(--green)">Git</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FAZENDO -->
+    <div class="kol doing">
+      <div class="kol-head">
+        <div class="kol-title">FAZENDO</div>
+        <span class="kol-count">1</span>
+      </div>
+      <div class="kol-body">
+        <div class="kcard" style="border-color:rgba(0,245,255,.25);background:rgba(0,245,255,.04)">
+          <div class="kc-title" style="color:var(--cyan)">🎯 Gráfico V/E/D — Forma Recente</div>
+          <div class="kc-desc">Botão GRÁFICO da forma recente precisa mostrar barras reais de Vitórias / Empates / Derrotas dos últimos jogos</div>
+          <div class="kc-tags">
+            <span class="tag" style="border-color:rgba(0,245,255,.4);color:var(--cyan)">Chart.js</span>
+            <span class="tag" style="border-color:rgba(0,245,255,.4);color:var(--cyan)">JS</span>
+            <span class="tag" style="border-color:rgba(255,183,0,.3);color:var(--amber)">PRÓXIMA TAREFA</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PRÓXIMO -->
+    <div class="kol next">
+      <div class="kol-head">
+        <div class="kol-title">PRÓXIMO</div>
+        <span class="kol-count">5</span>
+      </div>
+      <div class="kol-body">
+        <div class="kcard">
+          <div class="kc-title">Tabela de classificação</div>
+          <div class="kc-desc">Top 20 times com posição, pts, saldo de gols</div>
+          <div class="kc-tags"><span class="tag" style="border-color:rgba(255,183,0,.3);color:var(--amber)">tabela</span></div>
+        </div>
+        <div class="kcard">
+          <div class="kc-title">Comparativo entre dois clubes</div>
+          <div class="kc-desc">Selecionar Clube A vs Clube B lado a lado</div>
+          <div class="kc-tags"><span class="tag" style="border-color:rgba(255,183,0,.3);color:var(--amber)">UI</span><span class="tag" style="border-color:rgba(255,183,0,.3);color:var(--amber)">Radar</span></div>
+        </div>
+        <div class="kcard">
+          <div class="kc-title">Histórico de jogos</div>
+          <div class="kc-desc">Resultados da temporada com filtro por rodada</div>
+          <div class="kc-tags"><span class="tag" style="border-color:rgba(255,183,0,.3);color:var(--amber)">JSON</span><span class="tag" style="border-color:rgba(255,183,0,.3);color:var(--amber)">filter</span></div>
+        </div>
+        <div class="kcard">
+          <div class="kc-title">Artilharia e assistências</div>
+          <div class="kc-desc">Top marcadores e assistentes da temporada</div>
+          <div class="kc-tags"><span class="tag" style="border-color:rgba(255,183,0,.3);color:var(--amber)">players</span></div>
+        </div>
+        <div class="kcard">
+          <div class="kc-title">Predição de resultados</div>
+          <div class="kc-desc">Probabilidade com base em dados históricos</div>
+          <div class="kc-tags"><span class="tag" style="border-color:rgba(255,183,0,.3);color:var(--amber)">Python</span><span class="tag" style="border-color:rgba(255,183,0,.3);color:var(--amber)">ML</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- BACKLOG -->
+    <div class="kol backlog">
+      <div class="kol-head">
+        <div class="kol-title">BACKLOG</div>
+        <span class="kol-count">4</span>
+      </div>
+      <div class="kol-body">
+        <div class="kcard">
+          <div class="kc-title">Atualização automática de dados</div>
+          <div class="kc-desc">Cron job para buscar dados da API a cada rodada</div>
+        </div>
+        <div class="kcard">
+          <div class="kc-title">PWA / mobile app</div>
+          <div class="kc-desc">Instalar como app no celular</div>
+        </div>
+        <div class="kcard">
+          <div class="kc-title">Compartilhamento social</div>
+          <div class="kc-desc">Gerar imagem para postar no Twitter/X</div>
+        </div>
+        <div class="kcard">
+          <div class="kc-title">Modo dark / light</div>
+          <div class="kc-desc">Toggle de tema com preferência salva</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- O QUE PRECISAMOS PARA CHEGAR A 100% -->
+  <div style="margin-top:18px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;overflow:hidden">
+    <div style="padding:9px 14px;background:rgba(0,245,255,.04);border-bottom:1px solid var(--border);font-family:'Orbitron',monospace;font-size:9px;font-weight:700;letter-spacing:2px;color:var(--cyan)">🎯 CAMINHO PARA 100%</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:0">
+      <div style="padding:14px;border-right:1px solid var(--border)">
+        <div style="font-family:'Orbitron',monospace;font-size:9px;color:var(--green);margin-bottom:8px;letter-spacing:1px">SPRINT 1 — IMEDIATO (hoje)</div>
+        <div style="font-size:11px;color:var(--text);line-height:2">
+          ✅ Gráfico V/E/D forma recente<br>
+          ✅ Tabela de classificação<br>
+          ✅ Comparativo A vs B
+        </div>
+        <div style="font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--green);margin-top:8px">~90%</div>
+      </div>
+      <div style="padding:14px;border-right:1px solid var(--border)">
+        <div style="font-family:'Orbitron',monospace;font-size:9px;color:var(--amber);margin-bottom:8px;letter-spacing:1px">SPRINT 2 — PRÓXIMOS DIAS</div>
+        <div style="font-size:11px;color:var(--text);line-height:2">
+          ⚡ Histórico de jogos<br>
+          ⚡ Artilharia e assistências<br>
+          ⚡ Polimento mobile
+        </div>
+        <div style="font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--amber);margin-top:8px">~97%</div>
+      </div>
+      <div style="padding:14px">
+        <div style="font-family:'Orbitron',monospace;font-size:9px;color:var(--purple);margin-bottom:8px;letter-spacing:1px">SPRINT 3 — FINALIZAÇÃO</div>
+        <div style="font-size:11px;color:var(--text);line-height:2">
+          🔮 Predição de resultados<br>
+          🔮 Dados atualizados automático<br>
+          🔮 Lançamento público
+        </div>
+        <div style="font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--purple);margin-top:8px">100% 🚀</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ══════ TODOS OS PROJETOS ══════ -->
+<div class="panel" id="panel-overview">
+  <div class="proj-overview">
+
+    <div class="po-card" style="border-color:rgba(0,255,136,.25)" onclick="show('placar',document.querySelector('.tab.focus'))">
+      <div class="po-head" style="background:rgba(0,255,136,.04)">
+        <span class="po-icon">⚽</span>
+        <div class="po-info">
+          <div class="po-name" style="color:var(--green)">PLACAR ANALÍTICO PRO</div>
+          <div class="po-stack">JS · Python · JSON · Chart.js</div>
+        </div>
+        <span style="font-size:9px;font-family:'Share Tech Mono',monospace;padding:3px 10px;border-radius:99px;background:rgba(0,255,136,.1);color:var(--green);border:1px solid rgba(0,255,136,.3)">🎯 FOCO</span>
+      </div>
+      <div class="po-body">
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--dim)"><span>Progresso</span><span style="color:var(--green);font-family:'Share Tech Mono',monospace">85%</span></div>
+        <div class="po-bar"><div class="po-fill" style="width:85%;background:linear-gradient(90deg,var(--cyan),var(--green))"></div></div>
+        <div class="po-next">
+          <strong>Imediato:</strong> Gráfico V/E/D · Tabela classificação · Comparativo A vs B<br>
+          <strong>Sprint 2:</strong> Histórico · Artilharia · Mobile polish<br>
+          <strong>Sprint 3:</strong> Predição · Dados automáticos · Launch 🚀
+        </div>
+      </div>
+    </div>
+
+    <div class="po-card" style="border-color:rgba(77,159,255,.25)">
+      <div class="po-head" style="background:rgba(77,159,255,.04)">
+        <span class="po-icon">🎵</span>
+        <div class="po-info">
+          <div class="po-name" style="color:var(--blue)">GAVIOLI RECORDS</div>
+          <div class="po-stack">Automação · TikTok · YouTube · Kwai</div>
+        </div>
+        <span style="font-size:9px;font-family:'Share Tech Mono',monospace;padding:3px 10px;border-radius:99px;background:rgba(90,122,154,.1);color:var(--dim);border:1px solid rgba(90,122,154,.2)">AGUARDA</span>
+      </div>
+      <div class="po-body">
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--dim)"><span>Progresso</span><span style="color:var(--blue);font-family:'Share Tech Mono',monospace">60%</span></div>
+        <div class="po-bar"><div class="po-fill" style="width:60%;background:linear-gradient(90deg,var(--blue),var(--cyan))"></div></div>
+        <div class="po-next">
+          <strong>Próximo:</strong> Agente Gemini para roteiro semanal automático<br>
+          <strong>Depois:</strong> Gerador de legendas com LM Studio<br>
+          <strong>Meta:</strong> Posts no piloto automático — Seg/Qua/Sex/Dom
+        </div>
+      </div>
+    </div>
+
+    <div class="po-card" style="border-color:rgba(176,106,255,.25)">
+      <div class="po-head" style="background:rgba(176,106,255,.04)">
+        <span class="po-icon">🦺</span>
+        <div class="po-info">
+          <div class="po-name" style="color:var(--purple)">CHECKLIST SEG. TRABALHO</div>
+          <div class="po-stack">Visão Computacional · NR · Multas</div>
+        </div>
+        <span style="font-size:9px;font-family:'Share Tech Mono',monospace;padding:3px 10px;border-radius:99px;background:rgba(90,122,154,.1);color:var(--dim);border:1px solid rgba(90,122,154,.2)">AGUARDA</span>
+      </div>
+      <div class="po-body">
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--dim)"><span>Progresso</span><span style="color:var(--purple);font-family:'Share Tech Mono',monospace">30%</span></div>
+        <div class="po-bar"><div class="po-fill" style="width:30%;background:linear-gradient(90deg,var(--purple),var(--blue))"></div></div>
+        <div class="po-next">
+          <strong>Próximo:</strong> Pipeline imagem → Claude Vision → identificação<br>
+          <strong>Depois:</strong> Mapeamento das NRs principais (1, 5, 6, 12, 35)<br>
+          <strong>Meta:</strong> Upload foto → relatório com multas em segundos
+        </div>
+      </div>
+    </div>
+
+    <div class="po-card" style="border-color:rgba(255,183,0,.25)">
+      <div class="po-head" style="background:rgba(255,183,0,.04)">
+        <span class="po-icon">📈</span>
+        <div class="po-info">
+          <div class="po-name" style="color:var(--amber)">FOREX ROBOT — XAUUSD</div>
+          <div class="po-stack">FImathe · MT5 · MQL5</div>
+        </div>
+        <span style="font-size:9px;font-family:'Share Tech Mono',monospace;padding:3px 10px;border-radius:99px;background:rgba(90,122,154,.1);color:var(--dim);border:1px solid rgba(90,122,154,.2)">AGUARDA</span>
+      </div>
+      <div class="po-body">
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--dim)"><span>Progresso</span><span style="color:var(--amber);font-family:'Share Tech Mono',monospace">20%</span></div>
+        <div class="po-bar"><div class="po-fill" style="width:20%;background:linear-gradient(90deg,var(--amber),var(--orange))"></div></div>
+        <div class="po-next">
+          <strong>Próximo:</strong> Codificar lógica FImathe em MQL5<br>
+          <strong>Depois:</strong> Backtesting no MT5 Strategy Tester<br>
+          <strong>Meta:</strong> Robô operando XAUUSD automaticamente
+        </div>
+      </div>
+    </div>
+
+    <div class="po-card" style="border-color:rgba(255,60,90,.25)">
+      <div class="po-head" style="background:rgba(255,60,90,.04)">
+        <span class="po-icon">💊</span>
+        <div class="po-info">
+          <div class="po-name" style="color:var(--red)">PRODUTO NUTRICIONAL</div>
+          <div class="po-stack">Whey Protein · Profissionais de Saúde</div>
+        </div>
+        <span style="font-size:9px;font-family:'Share Tech Mono',monospace;padding:3px 10px;border-radius:99px;background:rgba(90,122,154,.1);color:var(--dim);border:1px solid rgba(90,122,154,.2)">AGUARDA</span>
+      </div>
+      <div class="po-body">
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--dim)"><span>Progresso</span><span style="color:var(--red);font-family:'Share Tech Mono',monospace">10%</span></div>
+        <div class="po-bar"><div class="po-fill" style="width:10%;background:linear-gradient(90deg,var(--red),var(--amber))"></div></div>
+        <div class="po-next">
+          <strong>Próximo:</strong> Pesquisa de mercado e posicionamento<br>
+          <strong>Depois:</strong> Identidade visual + landing page<br>
+          <strong>Meta:</strong> Produto pronto para venda B2B
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══════ PLANO DO DIA ══════ -->
+<div class="panel" id="panel-planodia">
+
+  <div class="focus-banner" style="margin-bottom:18px">
+    <span class="fb-icon">⏰</span>
+    <div>
+      <div class="fb-title">PLANO DO DIA — FOCO: PLACAR ANALÍTICO</div>
+      <div class="fb-sub">12 horas de trabalho · <span id="data-hoje"></span></div>
+    </div>
+    <div class="fb-badge">12h / 6 blocos</div>
+  </div>
+
+  <div class="plan-grid">
+
+    <!-- TIMELINE -->
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px">
+      <div style="font-family:'Orbitron',monospace;font-size:9px;letter-spacing:2px;color:var(--dim);margin-bottom:12px">CRONOGRAMA</div>
+      <div class="timeline">
+
+        <div class="tl-item" onclick="selectTask(0)">
+          <div class="tl-time">08:00</div>
+          <div class="tl-dot" style="border-color:var(--cyan);background:var(--cyan)"></div>
+          <div class="tl-body">
+            <div class="tl-title">Gráfico V/E/D</div>
+            <div class="tl-desc">Forma recente com barras reais</div>
+            <div class="tl-dur" style="color:var(--cyan)">2h</div>
+          </div>
+        </div>
+
+        <div class="tl-item" onclick="selectTask(1)">
+          <div class="tl-time">10:00</div>
+          <div class="tl-dot" style="border-color:var(--amber)"></div>
+          <div class="tl-body">
+            <div class="tl-title">Tabela de Classificação</div>
+            <div class="tl-desc">Top 20 com pontos, gols, saldo</div>
+            <div class="tl-dur" style="color:var(--amber)">2h</div>
+          </div>
+        </div>
+
+        <div class="tl-item" onclick="selectTask(2)">
+          <div class="tl-time">12:00</div>
+          <div class="tl-dot" style="border-color:var(--dim)"></div>
+          <div class="tl-body">
+            <div class="tl-title">☕ Pausa</div>
+            <div class="tl-desc">Almoço + descanso</div>
+            <div class="tl-dur" style="color:var(--dim)">1h</div>
+          </div>
+        </div>
+
+        <div class="tl-item" onclick="selectTask(3)">
+          <div class="tl-time">13:00</div>
+          <div class="tl-dot" style="border-color:var(--amber)"></div>
+          <div class="tl-body">
+            <div class="tl-title">Comparativo A vs B</div>
+            <div class="tl-desc">Dois clubes lado a lado com radar</div>
+            <div class="tl-dur" style="color:var(--amber)">2h</div>
+          </div>
+        </div>
+
+        <div class="tl-item" onclick="selectTask(4)">
+          <div class="tl-time">15:00</div>
+          <div class="tl-dot" style="border-color:var(--amber)"></div>
+          <div class="tl-body">
+            <div class="tl-title">Histórico de Jogos</div>
+            <div class="tl-desc">Lista de resultados com filtro rodada</div>
+            <div class="tl-dur" style="color:var(--amber)">2h</div>
+          </div>
+        </div>
+
+        <div class="tl-item" onclick="selectTask(5)">
+          <div class="tl-time">17:00</div>
+          <div class="tl-dot" style="border-color:var(--amber)"></div>
+          <div class="tl-body">
+            <div class="tl-title">Artilharia & Assistências</div>
+            <div class="tl-desc">Top marcadores da temporada</div>
+            <div class="tl-dur" style="color:var(--amber)">2h</div>
+          </div>
+        </div>
+
+        <div class="tl-item" onclick="selectTask(6)">
+          <div class="tl-time">19:00</div>
+          <div class="tl-dot" style="border-color:var(--purple)"></div>
+          <div class="tl-body">
+            <div class="tl-title">Polish & Mobile</div>
+            <div class="tl-desc">Responsividade, bugs visuais, refinamento</div>
+            <div class="tl-dur" style="color:var(--purple)">1h</div>
+          </div>
+        </div>
+
+        <div class="tl-item" onclick="selectTask(7)">
+          <div class="tl-time">20:00</div>
+          <div class="tl-dot" style="border-color:var(--green)"></div>
+          <div class="tl-body">
+            <div class="tl-title">🚀 Commit & Deploy</div>
+            <div class="tl-desc">Push para origin + tag v0.9</div>
+            <div class="tl-dur" style="color:var(--green)">30min</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- DETAIL -->
+    <div class="task-detail" id="task-detail">
+      <div class="td-header">
+        <div class="td-title" style="color:var(--cyan)">🎯 Gráfico V/E/D — Forma Recente</div>
+        <div class="td-sub">Bloco 1 de 6 · 08:00–10:00 · 2 horas · Claude Sonnet</div>
+      </div>
+      <div class="td-section">
+        <div class="td-label">OBJETIVO</div>
+        <div style="font-size:12px;color:var(--text);line-height:1.7">O botão GRÁFICO da seção "Forma Recente" precisa exibir um gráfico de barras mostrando V/E/D (Vitórias / Empates / Derrotas) dos últimos 5 jogos do clube selecionado.</div>
+      </div>
+      <div class="td-section">
+        <div class="td-label">PASSOS</div>
+        <div class="step"><span class="step-num">01</span><span class="step-text">Abrir GitHub Codespace do placar-analitico</span></div>
+        <div class="step"><span class="step-num">02</span><span class="step-text">Localizar o bloco da Forma Recente no JS (provavelmente renderFormaRecente ou similar)</span></div>
+        <div class="step"><span class="step-num">03</span><span class="step-text">Verificar se os dados V/E/D já existem no JSON ou precisam ser calculados a partir dos resultados</span></div>
+        <div class="step"><span class="step-num">04</span><span class="step-text">Criar canvas Chart.js ou elemento SVG para o gráfico de barras empilhadas/agrupadas</span></div>
+        <div class="step"><span class="step-num">05</span><span class="step-text">Cores: Verde (V), Amarelo (E), Vermelho (D) — consistentes com o resto do dashboard</span></div>
+        <div class="step"><span class="step-num">06</span><span class="step-text">Ligar ao toggle: botão GRÁFICO mostra o chart, botão DETALHES mostra a lista atual</span></div>
+        <div class="step"><span class="step-num">07</span><span class="step-text">Testar com 3 clubes diferentes para garantir que os dados carregam corretamente</span></div>
+        <div class="step"><span class="step-num">08</span><span class="step-text">Commit: "feat: forma recente — gráfico V/E/D implementado"</span></div>
+      </div>
+      <div class="td-section">
+        <div class="td-label">AGENTE</div>
+        <div style="font-size:12px;color:var(--purple)">🟣 Claude Sonnet — abrir Codespace e executar</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+</div><!-- main -->
+
+<footer style="text-align:center;padding:12px;font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--dim);border-top:1px solid var(--border)">
+  GAVIOLI CORP · FALCO 🦅 · RELATÓRIO DE PROJETOS v1.0 — 2026
+</footer>
+
+<script>
+function show(id,el){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('panel-'+id).classList.add('active');
+  el.classList.add('active');
+}
+
+function updateClock(){
+  const now = new Date();
+  document.getElementById('clock').textContent = now.toLocaleTimeString('pt-BR');
+  const d = now.toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long'});
+  const el = document.getElementById('data-hoje');
+  if(el) el.textContent = d;
+}
+updateClock(); setInterval(updateClock,1000);
+
+const tasks = [
+  {
+    title:'🎯 Gráfico V/E/D — Forma Recente',
+    sub:'Bloco 1 de 6 · 08:00–10:00 · 2 horas · Claude Sonnet',
+    obj:'O botão GRÁFICO da seção "Forma Recente" precisa exibir um gráfico de barras com Vitórias / Empates / Derrotas dos últimos jogos do clube selecionado.',
+    steps:['Abrir GitHub Codespace do placar-analitico','Localizar o bloco da Forma Recente no JS','Verificar se dados V/E/D existem no JSON ou precisam ser calculados','Criar gráfico de barras com Chart.js','Cores: Verde (V) · Amarelo (E) · Vermelho (D)','Ligar ao toggle: GRÁFICO mostra chart, DETALHES mostra lista','Testar com 3 clubes diferentes','Commit: feat: forma recente — gráfico V/E/D'],
+    agent:'🟣 Claude Sonnet — abrir Codespace e executar'
+  },
+  {
+    title:'📊 Tabela de Classificação',
+    sub:'Bloco 2 de 6 · 10:00–12:00 · 2 horas · Claude Sonnet',
+    obj:'Seção nova com a tabela completa da Premier League: posição, clube, jogos, vitórias, empates, derrotas, gols, saldo e pontos. Clicar no clube seleciona ele no dashboard.',
+    steps:['Criar seção #classificacao no HTML','Estruturar dados de classificação no JSON (ou calcular a partir dos resultados)','Renderizar tabela com colunas: Pos · Clube · J · V · E · D · GP · GC · SG · Pts','Highlight do clube atualmente selecionado na tabela','Clicar na linha da tabela seleciona o clube no dashboard principal','Ordenação padrão por pontos (com saldo de gols como critério de desempate)','Testar responsividade','Commit: feat: tabela de classificação'],
+    agent:'🟣 Claude Sonnet'
+  },
+  {
+    title:'☕ Pausa — Almoço',
+    sub:'12:00–13:00 · 1 hora',
+    obj:'Descanso e reabastecimento. O Falco continua disponível se precisar de algo.',
+    steps:['Comer','Descansar','Voltar com energia para o bloco da tarde'],
+    agent:'— (pausa)'
+  },
+  {
+    title:'⚖️ Comparativo A vs B',
+    sub:'Bloco 3 de 5 · 13:00–15:00 · 2 horas · Claude Sonnet',
+    obj:'Nova seção ou modal onde o usuário seleciona dois clubes e vê um comparativo lado a lado com radar sobreposto, estatísticas e histórico de confrontos diretos.',
+    steps:['Criar seletor duplo: Clube A (atual) e Clube B (novo dropdown)','Radar chart com dois datasets sobrepostos (cores dos dois clubes)','Tabela comparativa: ataque, defesa, forma, casa/fora','Histórico de confrontos diretos entre os dois (se disponível nos dados)','Animação suave ao trocar qualquer clube','Testar com vários pares (ex: Arsenal vs Man City, Chelsea vs Liverpool)','Commit: feat: comparativo A vs B'],
+    agent:'🟣 Claude Sonnet'
+  },
+  {
+    title:'📋 Histórico de Jogos',
+    sub:'Bloco 4 de 5 · 15:00–17:00 · 2 horas · Claude Sonnet',
+    obj:'Lista dos resultados da temporada para o clube selecionado, com filtro por rodada e indicação de resultado (V/E/D) com cores.',
+    steps:['Criar seção #historico com lista de jogos','Cada item: rodada · adversário · placar · local (casa/fora) · resultado (cor)','Filtro por rodada (dropdown ou slider)','Clicar em um jogo expande detalhes (se disponível)','Scroll com altura máxima definida (não ocupa a tela toda)','Commit: feat: histórico de jogos'],
+    agent:'🟣 Claude Sonnet'
+  },
+  {
+    title:'⚽ Artilharia & Assistências',
+    sub:'Bloco 5 de 5 · 17:00–19:00 · 2 horas · Claude Sonnet',
+    obj:'Seção com os maiores artilheiros e assistentes da temporada. Top 10 em cada categoria com foto/escudo do clube.',
+    steps:['Verificar se dados de jogadores existem no JSON','Se não: criar estrutura players.json com nome, clube, gols, assistências','Renderizar top 10 artilheiros com barra de gols','Renderizar top 10 assistentes com barra de assistências','Filtro: todos os clubes ou apenas o clube selecionado','Responsivo — funcionar bem no mobile','Commit: feat: artilharia e assistências'],
+    agent:'🔵 Gemini (dados) + 🟣 Claude Sonnet (código)'
+  },
+  {
+    title:'✨ Polish & Mobile',
+    sub:'Bloco final · 19:00–20:00 · 1 hora · Claude Sonnet',
+    obj:'Revisar todo o dashboard: animações, espaçamentos, fontes, hover states. Testar no mobile (375px) e tablet (768px). Corrigir qualquer bug visual.',
+    steps:['Abrir DevTools → responsive view 375px','Verificar se todos os gráficos ficam legíveis no mobile','Checar todos os toggles e dropdowns no touch','Corrigir overflow horizontal se houver','Checar contraste e legibilidade','Revisão geral de UX'],
+    agent:'🟣 Claude Sonnet'
+  },
+  {
+    title:'🚀 Commit & Deploy',
+    sub:'20:00 · 30 minutos · DevOps',
+    obj:'Consolidar todo o trabalho do dia em um commit limpo e fazer push para produção.',
+    steps:['git status — revisar todos os arquivos alterados','git add -p — staging seletivo','git commit -m "feat: sprint 1 completo — V/E/D, classificação, comparativo A/B, histórico, artilharia"','git push origin main','Verificar build no GitHub Pages','Testar URL de produção com 3 clubes','Anotar o que sobrou para o próximo dia'],
+    agent:'🟣 Claude Sonnet (DevOps mode)'
+  }
+];
+
+function selectTask(i){
+  const t = tasks[i];
+  const d = document.getElementById('task-detail');
+  const stepHtml = t.steps.map((s,n)=>`<div class="step"><span class="step-num">${String(n+1).padStart(2,'0')}</span><span class="step-text">${s}</span></div>`).join('');
+  d.innerHTML = `
+    <div class="td-header">
+      <div class="td-title" style="color:var(--cyan)">${t.title}</div>
+      <div class="td-sub">${t.sub}</div>
+    </div>
+    <div class="td-section">
+      <div class="td-label">OBJETIVO</div>
+      <div style="font-size:12px;color:var(--text);line-height:1.7">${t.obj}</div>
+    </div>
+    <div class="td-section">
+      <div class="td-label">PASSOS</div>
+      ${stepHtml}
+    </div>
+    <div class="td-section">
+      <div class="td-label">AGENTE</div>
+      <div style="font-size:12px;color:var(--purple)">${t.agent}</div>
+    </div>
+  `;
+  document.querySelectorAll('.tl-item').forEach((el,idx)=>{
+    el.classList.toggle('active-task', idx===i);
+  });
+}
+</script>
+</body>
+</html>
