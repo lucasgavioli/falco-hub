@@ -1,0 +1,1050 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FALCO — Mapa Tático de Agentes</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&family=Rajdhani:wght@300;400;600;700&display=swap');
+:root{
+  --cyan:#00f5ff;--green:#00ff88;--amber:#ffb700;--red:#ff3c5a;
+  --purple:#b06aff;--blue:#4d9fff;--orange:#ff6b2b;--teal:#00e5b0;
+  --bg:#020810;--bg2:#060d1a;--bg3:#0a1628;
+  --border:rgba(0,245,255,0.12);--borderB:rgba(0,245,255,0.35);
+  --text:#c8e8ff;--dim:#5a7a9a;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--text);font-family:'Rajdhani',sans-serif;min-height:100vh;overflow-x:hidden;}
+body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.02) 2px,rgba(0,0,0,.02) 4px);pointer-events:none;z-index:1000;}
+
+/* HEADER */
+header{background:linear-gradient(180deg,rgba(0,20,50,.95),rgba(2,8,16,.9));border-bottom:1px solid var(--borderB);padding:12px 24px;display:flex;align-items:center;gap:14px;position:sticky;top:0;z-index:100;backdrop-filter:blur(10px);}
+.logo{font-family:'Orbitron',monospace;font-size:18px;font-weight:900;color:var(--cyan);text-shadow:0 0 20px rgba(0,245,255,.6);letter-spacing:4px;}
+.logo span{color:var(--amber);}
+.back{margin-left:auto;font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--dim);text-decoration:none;padding:4px 10px;border:1px solid var(--border);border-radius:4px;transition:.2s;}
+.back:hover{border-color:var(--cyan);color:var(--cyan);}
+
+/* TABS */
+nav{display:flex;gap:2px;padding:0 24px;background:var(--bg2);border-bottom:1px solid var(--border);overflow-x:auto;}
+.tab{padding:9px 18px;font-family:'Orbitron',monospace;font-size:9px;font-weight:700;letter-spacing:2px;color:var(--dim);cursor:pointer;border-bottom:2px solid transparent;transition:.2s;white-space:nowrap;}
+.tab:hover{color:var(--cyan);}
+.tab.active{color:var(--cyan);border-bottom-color:var(--cyan);}
+
+/* MAIN */
+.main{padding:20px 24px;max-width:1600px;margin:0 auto;}
+.panel{display:none;}
+.panel.active{display:block;animation:fadeIn .3s ease;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+@keyframes glow{0%,100%{box-shadow:0 0 20px rgba(0,245,255,.2)}50%{box-shadow:0 0 40px rgba(0,245,255,.5)}}
+@keyframes floatIn{from{opacity:0;transform:scale(.9)}to{opacity:1;transform:scale(1)}}
+
+/* ═══ ORG CHART ═══ */
+.org{overflow-x:auto;padding-bottom:20px;}
+
+/* Topo: CEO + GM */
+.org-top{display:flex;justify-content:center;gap:60px;margin-bottom:0;position:relative;}
+.org-top::after{content:'';position:absolute;bottom:-30px;left:50%;width:2px;height:30px;background:linear-gradient(180deg,var(--amber),var(--cyan));}
+
+.org-ceo{display:flex;flex-direction:column;align-items:center;gap:4px;}
+.ceo-box{background:linear-gradient(135deg,rgba(255,183,0,.12),rgba(255,183,0,.04));border:2px solid var(--amber);border-radius:10px;padding:16px 32px;text-align:center;animation:glow 4s infinite;position:relative;}
+.ceo-box::before{content:'CEO';position:absolute;top:-8px;left:50%;transform:translateX(-50%);background:var(--bg2);padding:0 6px;font-family:'Share Tech Mono',monospace;font-size:8px;color:var(--amber);letter-spacing:2px;}
+.ceo-name{font-family:'Orbitron',monospace;font-size:14px;font-weight:900;color:var(--amber);}
+.ceo-role{font-size:10px;color:var(--dim);margin-top:2px;font-family:'Share Tech Mono',monospace;}
+.ceo-tag{font-size:9px;color:var(--amber);margin-top:4px;opacity:.7;}
+
+.gm-box{background:linear-gradient(135deg,rgba(0,245,255,.1),rgba(0,245,255,.03));border:2px solid var(--cyan);border-radius:10px;padding:16px 28px;text-align:center;position:relative;}
+.gm-box::before{content:'GERENTE GERAL';position:absolute;top:-8px;left:50%;transform:translateX(-50%);background:var(--bg2);padding:0 6px;font-family:'Share Tech Mono',monospace;font-size:8px;color:var(--cyan);letter-spacing:2px;}
+.gm-name{font-family:'Orbitron',monospace;font-size:14px;font-weight:900;color:var(--cyan);}
+.gm-role{font-size:10px;color:var(--dim);margin-top:2px;font-family:'Share Tech Mono',monospace;}
+
+/* Linha de conexão CEO→GM */
+.connector-h{display:flex;align-items:center;justify-content:center;gap:0;height:20px;margin-bottom:0;}
+.connector-line{height:2px;width:60px;background:linear-gradient(90deg,var(--amber),var(--cyan));}
+.connector-arrow{color:var(--cyan);font-size:14px;line-height:1;}
+
+/* Container de setores */
+.sectors-connector{display:flex;justify-content:center;margin:30px 0 0;}
+.sectors-container{width:100%;position:relative;}
+.sectors-topbar{height:2px;background:linear-gradient(90deg,transparent,var(--cyan) 20%,var(--cyan) 80%,transparent);margin:0 5%;}
+
+/* Grid de setores */
+.sectors-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;padding-top:16px;}
+
+/* Setor card */
+.setor{border-radius:10px;overflow:hidden;border:1.5px solid;display:flex;flex-direction:column;}
+.setor-head{padding:10px 12px;display:flex;align-items:center;gap:8px;border-bottom:1px solid rgba(255,255,255,.06);}
+.setor-icon{font-size:18px;}
+.setor-title{font-family:'Orbitron',monospace;font-size:9px;font-weight:700;letter-spacing:1px;line-height:1.3;}
+.setor-model{font-family:'Share Tech Mono',monospace;font-size:8px;margin-top:3px;opacity:.6;}
+.setor-agents{padding:8px;}
+
+/* Agent mini card */
+.agent-mini{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:6px;padding:7px 8px;margin-bottom:6px;cursor:pointer;transition:.2s;display:flex;align-items:flex-start;gap:7px;}
+.agent-mini:last-child{margin-bottom:0;}
+.agent-mini:hover{background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.15);transform:translateX(3px);}
+.agent-mini-icon{font-size:14px;min-width:16px;margin-top:1px;}
+.agent-mini-body{}
+.agent-mini-name{font-size:11px;font-weight:700;color:var(--text);}
+.agent-mini-cap{font-size:9px;color:var(--dim);line-height:1.5;margin-top:1px;}
+
+/* Setor colors */
+.s-tech{border-color:rgba(176,106,255,.35);background:rgba(176,106,255,.02);}
+.s-tech .setor-head{background:rgba(176,106,255,.06);}
+.s-tech .setor-title{color:var(--purple);}
+.s-content{border-color:rgba(77,159,255,.35);background:rgba(77,159,255,.02);}
+.s-content .setor-head{background:rgba(77,159,255,.06);}
+.s-content .setor-title{color:var(--blue);}
+.s-fast{border-color:rgba(255,183,0,.35);background:rgba(255,183,0,.02);}
+.s-fast .setor-head{background:rgba(255,183,0,.06);}
+.s-fast .setor-title{color:var(--amber);}
+.s-deep{border-color:rgba(255,107,43,.35);background:rgba(255,107,43,.02);}
+.s-deep .setor-head{background:rgba(255,107,43,.06);}
+.s-deep .setor-title{color:var(--orange);}
+.s-strategy{border-color:rgba(255,60,90,.35);background:rgba(255,60,90,.02);}
+.s-strategy .setor-head{background:rgba(255,60,90,.06);}
+.s-strategy .setor-title{color:var(--red);}
+.s-base{border-color:rgba(0,255,136,.35);background:rgba(0,255,136,.02);}
+.s-base .setor-head{background:rgba(0,255,136,.06);}
+.s-base .setor-title{color:var(--green);}
+
+/* ═══ AGENT CARDS (detalhe) ═══ */
+.agents-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px;}
+.agent-card{background:var(--bg2);border:1.5px solid var(--border);border-radius:10px;overflow:hidden;transition:.2s;}
+.agent-card:hover{border-color:var(--borderB);transform:translateY(-3px);box-shadow:0 8px 30px rgba(0,0,0,.4);}
+.ac-head{padding:12px 14px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border);}
+.ac-icon{font-size:22px;}
+.ac-info{flex:1;}
+.ac-name{font-family:'Orbitron',monospace;font-size:11px;font-weight:700;}
+.ac-model{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--dim);margin-top:2px;}
+.ac-body{padding:12px 14px;}
+.ac-section{margin-bottom:10px;}
+.ac-section:last-child{margin-bottom:0;}
+.ac-label{font-family:'Orbitron',monospace;font-size:8px;letter-spacing:2px;color:var(--dim);margin-bottom:5px;text-transform:uppercase;}
+.ac-caps{display:flex;flex-wrap:wrap;gap:4px;}
+.cap{padding:2px 8px;border-radius:99px;font-size:9px;font-family:'Share Tech Mono',monospace;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);color:var(--text);}
+.ac-projs{display:flex;flex-wrap:wrap;gap:4px;}
+.proj-tag{padding:2px 8px;border-radius:99px;font-size:9px;font-family:'Share Tech Mono',monospace;border:1px solid;}
+.ac-status{display:flex;align-items:center;gap:6px;font-family:'Share Tech Mono',monospace;font-size:9px;}
+.status-dot{width:6px;height:6px;border-radius:50%;}
+
+/* ═══ MATRIX ═══ */
+.matrix-wrap{overflow-x:auto;}
+table.matrix{width:100%;border-collapse:separate;border-spacing:3px;min-width:800px;}
+.matrix th{font-family:'Orbitron',monospace;font-size:9px;letter-spacing:1px;padding:8px 10px;background:rgba(0,245,255,.05);border:1px solid var(--border);color:var(--cyan);text-align:center;white-space:nowrap;}
+.matrix th.proj{background:rgba(0,245,255,.03);color:var(--dim);}
+.matrix td{padding:6px 8px;border:1px solid rgba(255,255,255,.04);background:var(--bg2);text-align:center;font-family:'Share Tech Mono',monospace;font-size:10px;vertical-align:middle;}
+.matrix td.agent-name{text-align:left;font-family:'Rajdhani',sans-serif;font-weight:700;font-size:12px;white-space:nowrap;padding-left:10px;}
+.matrix td.tier{font-size:8px;color:var(--dim);text-align:center;padding:4px;}
+.cell-primary{background:rgba(0,255,136,.12);color:var(--green);font-weight:700;border-radius:4px;padding:2px 6px;}
+.cell-support{background:rgba(77,159,255,.08);color:var(--blue);border-radius:4px;padding:2px 6px;}
+.cell-can{background:rgba(255,183,0,.06);color:var(--amber);border-radius:4px;padding:2px 6px;}
+.cell-no{color:rgba(255,255,255,.1);}
+.legend{display:flex;gap:16px;margin-bottom:12px;flex-wrap:wrap;}
+.leg-item{display:flex;align-items:center;gap:6px;font-size:11px;}
+.leg-box{padding:2px 8px;border-radius:4px;font-family:'Share Tech Mono',monospace;font-size:9px;}
+
+@media(max-width:900px){.sectors-grid{grid-template-columns:repeat(2,1fr)}.org-top{gap:20px}}
+@media(max-width:500px){.sectors-grid{grid-template-columns:1fr}.agents-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">🦅 <span>FALCO</span> <span style="color:var(--dim);font-size:12px;font-weight:400">/ MAPA TÁTICO</span></div>
+  <a href="dashboard.html" class="back">← MISSION CONTROL</a>
+</header>
+
+<nav>
+  <div class="tab active" onclick="show('organograma',this)">ORGANOGRAMA</div>
+  <div class="tab" onclick="show('agentes',this)">AGENTES — DETALHE</div>
+  <div class="tab" onclick="show('matrix',this)">MATRIZ PROJETO × AGENTE</div>
+</nav>
+
+<div class="main">
+
+<!-- ══════ ORGANOGRAMA ══════ -->
+<div class="panel active" id="panel-organograma">
+
+  <!-- CEO + GM -->
+  <div style="display:flex;flex-direction:column;align-items:center;margin-bottom:8px">
+    <div style="display:flex;align-items:center;gap:40px;margin-bottom:0">
+      <div class="ceo-box">
+        <div style="font-size:28px;margin-bottom:4px">👔</div>
+        <div class="ceo-name">LUCAS GAVIOLI</div>
+        <div class="ceo-role">CEO · DECISOR</div>
+        <div class="ceo-tag">decide a direção · autoridade máxima</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:0">
+        <div style="width:40px;height:2px;background:linear-gradient(90deg,var(--amber),var(--cyan))"></div>
+        <div style="color:var(--cyan);font-size:16px">→</div>
+      </div>
+      <div class="gm-box" style="animation:glow 4s infinite">
+        <div style="font-size:28px;margin-bottom:4px">🦅</div>
+        <div class="gm-name">FALCO</div>
+        <div class="gm-role">GERENTE GERAL · EXECUTOR</div>
+        <div style="font-size:9px;color:var(--dim);margin-top:3px;font-family:'Share Tech Mono',monospace">openclaw · claude-cli · context-aware</div>
+      </div>
+    </div>
+    <div style="display:flex;justify-content:center;width:100%;height:30px;position:relative">
+      <div style="width:2px;height:100%;background:linear-gradient(180deg,var(--cyan),transparent);margin:0 auto"></div>
+    </div>
+  </div>
+
+  <!-- Label setores -->
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+    <div style="flex:1;height:1px;background:linear-gradient(90deg,transparent,var(--border))"></div>
+    <div style="font-family:'Orbitron',monospace;font-size:9px;letter-spacing:3px;color:var(--dim)">SETORES OPERACIONAIS</div>
+    <div style="flex:1;height:1px;background:linear-gradient(90deg,var(--border),transparent)"></div>
+  </div>
+
+  <!-- Setores -->
+  <div class="sectors-grid" style="grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:14px">
+
+    <!-- SETOR TECNOLOGIA -->
+    <div class="setor s-tech">
+      <div class="setor-head">
+        <span class="setor-icon">💻</span>
+        <div>
+          <div class="setor-title">TECNOLOGIA</div>
+          <div class="setor-model">Claude Sonnet 4.6</div>
+        </div>
+      </div>
+      <div class="setor-agents">
+        <div class="agent-mini" onclick="showAgent('developer')">
+          <span class="agent-mini-icon">🏗️</span>
+          <div class="agent-mini-body">
+            <div class="agent-mini-name">DEVELOPER</div>
+            <div class="agent-mini-cap">JS · Python · React · APIs · debug</div>
+          </div>
+        </div>
+        <div class="agent-mini" onclick="showAgent('architect')">
+          <span class="agent-mini-icon">🗺️</span>
+          <div class="agent-mini-body">
+            <div class="agent-mini-name">ARCHITECT</div>
+            <div class="agent-mini-cap">design de sistemas · decisões técnicas</div>
+          </div>
+        </div>
+        <div class="agent-mini" onclick="showAgent('devops')">
+          <span class="agent-mini-icon">🚀</span>
+          <div class="agent-mini-body">
+            <div class="agent-mini-name">DEVOPS</div>
+            <div class="agent-mini-cap">deploy · CI/CD · systemd · Docker</div>
+          </div>
+        </div>
+        <div class="agent-mini" onclick="showAgent('rootcause')">
+          <span class="agent-mini-icon">🔍</span>
+          <div class="agent-mini-body">
+            <div class="agent-mini-name">ROOTCAUSE</div>
+            <div class="agent-mini-cap">debug profundo · análise de erros</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SETOR CONTEÚDO -->
+    <div class="setor s-content">
+      <div class="setor-head">
+        <span class="setor-icon">🎨</span>
+        <div>
+          <div class="setor-title">CONTEÚDO & MARKETING</div>
+          <div class="setor-model">Gemini 3.1 Pro + LM Studio</div>
+        </div>
+      </div>
+      <div class="setor-agents">
+        <div class="agent-mini" onclick="showAgent('content')">
+          <span class="agent-mini-icon">🎵</span>
+          <div class="agent-mini-body">
+            <div class="agent-mini-name">CONTENT CREATOR</div>
+            <div class="agent-mini-cap">posts · roteiros · TikTok/YouTube</div>
+          </div>
+        </div>
+        <div class="agent-mini" onclick="showAgent('copywriter')">
+          <span class="agent-mini-icon">✍️</span>
+          <div class="agent-mini-body">
+            <div class="agent-mini-name">COPYWRITER</div>
+            <div class="agent-mini-cap">legendas · textos · templates rápidos</div>
+          </div>
+        </div>
+        <div class="agent-mini" onclick="showAgent('analyst')">
+          <span class="agent-mini-icon">📊</span>
+          <div class="agent-mini-body">
+            <div class="agent-mini-name">ANALYST</div>
+            <div class="agent-mini-cap">pesquisa · dados · tendências</div>
+          </div>
+        </div>
+        <div class="agent-mini" onclick="showAgent('pm')">
+          <span class="agent-mini-icon">📅</span>
+          <div class="agent-mini-body">
+            <div class="agent-mini-name">PROJECT MANAGER</div>
+            <div class="agent-mini-cap">planejamento · sprints · orquestração</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SETOR ESTRATÉGIA -->
+    <div class="setor s-strategy">
+      <div class="setor-head">
+        <span class="setor-icon">♟️</span>
+        <div>
+          <div class="setor-title">ESTRATÉGIA & FINANÇAS</div>
+          <div class="setor-model">Claude Opus 4.8</div>
+        </div>
+      </div>
+      <div class="setor-agents">
+        <div class="agent-mini" onclick="showAgent('strategist')">
+          <span class="agent-mini-icon">🧠</span>
+          <div class="agent-mini-body">
+            <div class="agent-mini-name">STRATEGIC PLANNER</div>
+            <div class="agent-mini-cap">decisões críticas · visão de longo prazo</div>
+          </div>
+        </div>
+        <div class="agent-mini" onclick="showAgent('forex')">
+          <span class="agent-mini-icon">📈</span>
+          <div class="agent-mini-body">
+            <div class="agent-mini-name">FOREX ADVISOR</div>
+            <div class="agent-mini-cap">XAUUSD · FImathe · MT5 · gestão de risco</div>
+          </div>
+        </div>
+        <div class="agent-mini" onclick="showAgent('conclave')">
+          <span class="agent-mini-icon">⚔️</span>
+          <div class="agent-mini-body">
+            <div class="agent-mini-name">CONCLAVE</div>
+            <div class="agent-mini-cap">debate · crítica · advocatus diaboli</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SETOR ANÁLISE RÁPIDA -->
+    <div class="setor s-fast">
+      <div class="setor-head">
+        <span class="setor-icon">⚡</span>
+        <div>
+          <div class="setor-title">ANÁLISE RÁPIDA</div>
+          <div class="setor-model">Groq — 800 tok/s</div>
+        </div>
+      </div>
+      <div class="setor-agents">
+        <div class="agent-mini" onclick="showAgent('fast70')">
+          <span class="agent-mini-icon">🏎️</span>
+          <div class="agent-mini-body">
+            <div class="agent-mini-name">FAST RESPONDER</div>
+            <div class="agent-mini-cap">Llama 70B · contextos longos (128k)</div>
+          </div>
+        </div>
+        <div class="agent-mini" onclick="showAgent('fast8')">
+          <span class="agent-mini-icon">⚡</span>
+          <div class="agent-mini-body">
+            <div class="agent-mini-name">QUICK TASKS</div>
+            <div class="agent-mini-cap">Llama 8B · tarefas simples ultra-rápido</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SETOR ANÁLISE PROFUNDA -->
+    <div class="setor s-deep">
+      <div class="setor-head">
+        <span class="setor-icon">🧮</span>
+        <div>
+          <div class="setor-title">ANÁLISE PROFUNDA</div>
+          <div class="setor-model">Cerebras — 120B params</div>
+        </div>
+      </div>
+      <div class="setor-agents">
+        <div class="agent-mini" onclick="showAgent('heavy120')">
+          <span class="agent-mini-icon">🔬</span>
+          <div class="agent-mini-body">
+            <div class="agent-mini-name">HEAVY ANALYST</div>
+            <div class="agent-mini-cap">GPT OSS 120B · raciocínio complexo</div>
+          </div>
+        </div>
+        <div class="agent-mini" onclick="showAgent('research')">
+          <span class="agent-mini-icon">📚</span>
+          <div class="agent-mini-body">
+            <div class="agent-mini-name">RESEARCH AGENT</div>
+            <div class="agent-mini-cap">ZAI GLM 4.7 · pesquisa especializada</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SETOR BASE / INFRAESTRUTURA -->
+    <div class="setor s-base">
+      <div class="setor-head">
+        <span class="setor-icon">🧠</span>
+        <div>
+          <div class="setor-title">BASE & INFRAESTRUTURA</div>
+          <div class="setor-model">LM Studio — Local · R$0</div>
+        </div>
+      </div>
+      <div class="setor-agents">
+        <div class="agent-mini" onclick="showAgent('embedder')">
+          <span class="agent-mini-icon">🗄️</span>
+          <div class="agent-mini-body">
+            <div class="agent-mini-name">MEMORY EMBEDDER</div>
+            <div class="agent-mini-cap">nomic-embed · busca semântica · indexação</div>
+          </div>
+        </div>
+        <div class="agent-mini" onclick="showAgent('lcm')">
+          <span class="agent-mini-icon">🔄</span>
+          <div class="agent-mini-body">
+            <div class="agent-mini-name">LCM SUMMARIZER</div>
+            <div class="agent-mini-cap">Gemini · lossless-claw · DAG compactor</div>
+          </div>
+        </div>
+        <div class="agent-mini" onclick="showAgent('template')">
+          <span class="agent-mini-icon">📄</span>
+          <div class="agent-mini-body">
+            <div class="agent-mini-name">TEMPLATE CREATOR</div>
+            <div class="agent-mini-cap">Qwen 2.5 · templates reutilizáveis</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Modal de agente -->
+  <div id="agent-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:500;display:none;align-items:center;justify-content:center;backdrop-filter:blur(4px)" onclick="closeModal(event)">
+    <div id="modal-content" style="background:var(--bg2);border:1.5px solid var(--cyan);border-radius:12px;padding:24px;max-width:480px;width:90%;animation:floatIn .2s ease;position:relative">
+      <button onclick="document.getElementById('agent-modal').style.display='none'" style="position:absolute;top:12px;right:12px;background:none;border:1px solid var(--border);color:var(--dim);cursor:pointer;padding:2px 8px;border-radius:4px;font-family:'Share Tech Mono',monospace;font-size:10px">✕</button>
+      <div id="modal-body"></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ══════ AGENTES DETALHE ══════ -->
+<div class="panel" id="panel-agentes">
+  <div class="agents-grid">
+
+    <!-- DEVELOPER -->
+    <div class="agent-card" style="border-color:rgba(176,106,255,.3)">
+      <div class="ac-head" style="background:rgba(176,106,255,.05)">
+        <span class="ac-icon">🏗️</span>
+        <div class="ac-info">
+          <div class="ac-name" style="color:var(--purple)">DEVELOPER</div>
+          <div class="ac-model">Claude Sonnet 4.6 · Setor Tecnologia</div>
+        </div>
+        <span style="font-size:8px;font-family:'Share Tech Mono',monospace;padding:2px 8px;border-radius:99px;background:rgba(0,255,136,.1);color:var(--green);border:1px solid rgba(0,255,136,.3)">LIVE</span>
+      </div>
+      <div class="ac-body">
+        <div class="ac-section">
+          <div class="ac-label">Capacidades</div>
+          <div class="ac-caps">
+            <span class="cap">JavaScript</span><span class="cap">Python</span><span class="cap">HTML/CSS</span>
+            <span class="cap">React</span><span class="cap">REST APIs</span><span class="cap">JSON/SQL</span>
+            <span class="cap">Debug</span><span class="cap">Code Review</span><span class="cap">Refatoração</span>
+          </div>
+        </div>
+        <div class="ac-section">
+          <div class="ac-label">Projeto Principal</div>
+          <div class="ac-projs"><span class="proj-tag" style="border-color:rgba(0,255,136,.4);color:var(--green)">⚽ Placar Analítico</span></div>
+        </div>
+        <div class="ac-section">
+          <div class="ac-label">Pode Ajudar Em</div>
+          <div class="ac-projs">
+            <span class="proj-tag" style="border-color:rgba(176,106,255,.3);color:var(--purple)">🦺 Checklist ST</span>
+            <span class="proj-tag" style="border-color:rgba(255,183,0,.3);color:var(--amber)">📈 Forex Robot</span>
+            <span class="proj-tag" style="border-color:rgba(77,159,255,.3);color:var(--blue)">🎵 Gavioli Records</span>
+          </div>
+        </div>
+        <div class="ac-section">
+          <div class="ac-label">Quando Usar</div>
+          <div style="font-size:11px;color:var(--dim);line-height:1.7">Toda programação pesada. Código novo, bugfixes complexos, integrações de API, lógica de negócio crítica.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ARCHITECT -->
+    <div class="agent-card" style="border-color:rgba(176,106,255,.3)">
+      <div class="ac-head" style="background:rgba(176,106,255,.05)">
+        <span class="ac-icon">🗺️</span>
+        <div class="ac-info">
+          <div class="ac-name" style="color:var(--purple)">ARCHITECT</div>
+          <div class="ac-model">Claude Sonnet 4.6 · Setor Tecnologia</div>
+        </div>
+        <span style="font-size:8px;font-family:'Share Tech Mono',monospace;padding:2px 8px;border-radius:99px;background:rgba(0,255,136,.1);color:var(--green);border:1px solid rgba(0,255,136,.3)">LIVE</span>
+      </div>
+      <div class="ac-body">
+        <div class="ac-section">
+          <div class="ac-label">Capacidades</div>
+          <div class="ac-caps">
+            <span class="cap">Design de sistemas</span><span class="cap">Decisões técnicas</span>
+            <span class="cap">Trade-offs</span><span class="cap">Escalabilidade</span><span class="cap">Padrões</span>
+          </div>
+        </div>
+        <div class="ac-section">
+          <div class="ac-label">Projeto Principal</div>
+          <div class="ac-projs"><span class="proj-tag" style="border-color:rgba(0,245,255,.3);color:var(--cyan)">🦅 OpenClaw / Falco</span></div>
+        </div>
+        <div class="ac-section">
+          <div class="ac-label">Pode Ajudar Em</div>
+          <div class="ac-projs"><span class="proj-tag" style="border-color:rgba(90,122,154,.3);color:var(--dim)">Todos os projetos</span></div>
+        </div>
+        <div class="ac-section">
+          <div class="ac-label">Quando Usar</div>
+          <div style="font-size:11px;color:var(--dim);line-height:1.7">Antes de começar qualquer feature nova. Decidir como estruturar, quais bibliotecas usar, como os módulos se conectam.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- DEVOPS -->
+    <div class="agent-card" style="border-color:rgba(176,106,255,.3)">
+      <div class="ac-head" style="background:rgba(176,106,255,.05)">
+        <span class="ac-icon">🚀</span>
+        <div class="ac-info">
+          <div class="ac-name" style="color:var(--purple)">DEVOPS</div>
+          <div class="ac-model">Claude Sonnet 4.6 · Setor Tecnologia</div>
+        </div>
+        <span style="font-size:8px;font-family:'Share Tech Mono',monospace;padding:2px 8px;border-radius:99px;background:rgba(255,183,0,.1);color:var(--amber);border:1px solid rgba(255,183,0,.3)">SETUP</span>
+      </div>
+      <div class="ac-body">
+        <div class="ac-section">
+          <div class="ac-label">Capacidades</div>
+          <div class="ac-caps">
+            <span class="cap">GitHub Actions</span><span class="cap">systemd</span><span class="cap">Docker</span>
+            <span class="cap">Deploy</span><span class="cap">SSH</span><span class="cap">cron</span><span class="cap">nginx</span>
+          </div>
+        </div>
+        <div class="ac-section">
+          <div class="ac-label">Projeto Principal</div>
+          <div class="ac-projs"><span class="proj-tag" style="border-color:rgba(0,245,255,.3);color:var(--cyan)">🦅 Infra Falco</span></div>
+        </div>
+        <div class="ac-section">
+          <div class="ac-label">Pode Ajudar Em</div>
+          <div class="ac-projs"><span class="proj-tag" style="border-color:rgba(90,122,154,.3);color:var(--dim)">Todos — deploy e automação</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ROOTCAUSE -->
+    <div class="agent-card" style="border-color:rgba(176,106,255,.3)">
+      <div class="ac-head" style="background:rgba(176,106,255,.05)">
+        <span class="ac-icon">🔍</span>
+        <div class="ac-info">
+          <div class="ac-name" style="color:var(--purple)">ROOTCAUSE</div>
+          <div class="ac-model">Claude Sonnet 4.6 · Setor Tecnologia</div>
+        </div>
+        <span style="font-size:8px;font-family:'Share Tech Mono',monospace;padding:2px 8px;border-radius:99px;background:rgba(0,255,136,.1);color:var(--green);border:1px solid rgba(0,255,136,.3)">LIVE</span>
+      </div>
+      <div class="ac-body">
+        <div class="ac-section">
+          <div class="ac-label">Capacidades</div>
+          <div class="ac-caps">
+            <span class="cap">Debug profundo</span><span class="cap">Stack traces</span>
+            <span class="cap">Análise de logs</span><span class="cap">Reprodução de bugs</span><span class="cap">Hotfixes</span>
+          </div>
+        </div>
+        <div class="ac-section">
+          <div class="ac-label">Quando Usar</div>
+          <div style="font-size:11px;color:var(--dim);line-height:1.7">Qualquer erro que não está se resolvendo. "Tá quebrando mas não sei por quê" → ele investiga.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CONTENT CREATOR -->
+    <div class="agent-card" style="border-color:rgba(77,159,255,.3)">
+      <div class="ac-head" style="background:rgba(77,159,255,.05)">
+        <span class="ac-icon">🎵</span>
+        <div class="ac-info">
+          <div class="ac-name" style="color:var(--blue)">CONTENT CREATOR</div>
+          <div class="ac-model">Gemini 3.1 Pro · Setor Conteúdo</div>
+        </div>
+        <span style="font-size:8px;font-family:'Share Tech Mono',monospace;padding:2px 8px;border-radius:99px;background:rgba(255,183,0,.1);color:var(--amber);border:1px solid rgba(255,183,0,.3)">SETUP</span>
+      </div>
+      <div class="ac-body">
+        <div class="ac-section">
+          <div class="ac-label">Capacidades</div>
+          <div class="ac-caps">
+            <span class="cap">Posts TikTok/YouTube</span><span class="cap">Roteiros</span>
+            <span class="cap">Legendas</span><span class="cap">Hashtags</span><span class="cap">Calendário editorial</span><span class="cap">Copy gospel</span>
+          </div>
+        </div>
+        <div class="ac-section">
+          <div class="ac-label">Projeto Principal</div>
+          <div class="ac-projs"><span class="proj-tag" style="border-color:rgba(77,159,255,.4);color:var(--blue)">🎵 Gavioli Records</span></div>
+        </div>
+        <div class="ac-section">
+          <div class="ac-label">Pode Ajudar Em</div>
+          <div class="ac-projs">
+            <span class="proj-tag" style="border-color:rgba(255,60,90,.3);color:var(--red)">💊 Produto Nutricional</span>
+            <span class="proj-tag" style="border-color:rgba(0,255,136,.3);color:var(--green)">⚽ Placar Analítico</span>
+          </div>
+        </div>
+        <div class="ac-section">
+          <div class="ac-label">Roteiro Semanal Gavioli Records</div>
+          <div style="font-size:10px;color:var(--dim);line-height:1.8;font-family:'Share Tech Mono',monospace">
+            Seg → Chama música da sexta passada<br>
+            Qua/Qui → Teaser da nova<br>
+            Sex -1h → Pré-refrão + refrão<br>
+            Sex +1h → Música completa<br>
+            Dom → Chama a que saiu na sexta
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ANALYST -->
+    <div class="agent-card" style="border-color:rgba(77,159,255,.3)">
+      <div class="ac-head" style="background:rgba(77,159,255,.05)">
+        <span class="ac-icon">📊</span>
+        <div class="ac-info">
+          <div class="ac-name" style="color:var(--blue)">ANALYST</div>
+          <div class="ac-model">Gemini 3.1 Pro · Setor Conteúdo</div>
+        </div>
+        <span style="font-size:8px;font-family:'Share Tech Mono',monospace;padding:2px 8px;border-radius:99px;background:rgba(255,183,0,.1);color:var(--amber);border:1px solid rgba(255,183,0,.3)">SETUP</span>
+      </div>
+      <div class="ac-body">
+        <div class="ac-section">
+          <div class="ac-label">Capacidades</div>
+          <div class="ac-caps">
+            <span class="cap">Pesquisa web</span><span class="cap">Análise de mercado</span>
+            <span class="cap">Dados e métricas</span><span class="cap">Relatórios</span><span class="cap">Benchmarks</span><span class="cap">Tendências</span>
+          </div>
+        </div>
+        <div class="ac-section">
+          <div class="ac-label">Pode Ajudar Em</div>
+          <div class="ac-projs"><span class="proj-tag" style="border-color:rgba(90,122,154,.3);color:var(--dim)">Todos os projetos</span></div>
+        </div>
+        <div class="ac-section">
+          <div class="ac-label">Quando Usar</div>
+          <div style="font-size:11px;color:var(--dim);line-height:1.7">Pesquisar NRs para Checklist ST, tendências do mercado whey, dados Premier League, análise de competidores.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STRATEGIC PLANNER -->
+    <div class="agent-card" style="border-color:rgba(255,60,90,.3)">
+      <div class="ac-head" style="background:rgba(255,60,90,.05)">
+        <span class="ac-icon">🧠</span>
+        <div class="ac-info">
+          <div class="ac-name" style="color:var(--red)">STRATEGIC PLANNER</div>
+          <div class="ac-model">Claude Opus 4.8 · Setor Estratégia</div>
+        </div>
+        <span style="font-size:8px;font-family:'Share Tech Mono',monospace;padding:2px 8px;border-radius:99px;background:rgba(0,255,136,.1);color:var(--green);border:1px solid rgba(0,255,136,.3)">LIVE</span>
+      </div>
+      <div class="ac-body">
+        <div class="ac-section">
+          <div class="ac-label">Capacidades</div>
+          <div class="ac-caps">
+            <span class="cap">Decisões críticas</span><span class="cap">Visão de longo prazo</span>
+            <span class="cap">Análise de risco</span><span class="cap">Priorização</span><span class="cap">Planejamento estratégico</span>
+          </div>
+        </div>
+        <div class="ac-section">
+          <div class="ac-label">Quando Usar</div>
+          <div style="font-size:11px;color:var(--dim);line-height:1.7">Decisões irreversíveis, pivots de projeto, questões que envolvem dinheiro ou reputação. O mais poderoso — usar com parcimônia.</div>
+        </div>
+        <div class="ac-section">
+          <div class="ac-label">Pode Ajudar Em</div>
+          <div class="ac-projs"><span class="proj-tag" style="border-color:rgba(90,122,154,.3);color:var(--dim)">Todos os projetos</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FOREX ADVISOR -->
+    <div class="agent-card" style="border-color:rgba(255,60,90,.3)">
+      <div class="ac-head" style="background:rgba(255,60,90,.05)">
+        <span class="ac-icon">📈</span>
+        <div class="ac-info">
+          <div class="ac-name" style="color:var(--red)">FOREX ADVISOR</div>
+          <div class="ac-model">Claude Opus 4.8 · Setor Estratégia</div>
+        </div>
+        <span style="font-size:8px;font-family:'Share Tech Mono',monospace;padding:2px 8px;border-radius:99px;background:rgba(255,183,0,.1);color:var(--amber);border:1px solid rgba(255,183,0,.3)">SETUP</span>
+      </div>
+      <div class="ac-body">
+        <div class="ac-section">
+          <div class="ac-label">Capacidades</div>
+          <div class="ac-caps">
+            <span class="cap">XAUUSD (Ouro)</span><span class="cap">Estratégia FImathe</span>
+            <span class="cap">MT5 / MQL5</span><span class="cap">Gestão de risco</span><span class="cap">Backtesting</span><span class="cap">Automação</span>
+          </div>
+        </div>
+        <div class="ac-section">
+          <div class="ac-label">Projeto Principal</div>
+          <div class="ac-projs"><span class="proj-tag" style="border-color:rgba(255,183,0,.4);color:var(--amber)">📈 Forex Robot</span></div>
+        </div>
+        <div class="ac-section">
+          <div class="ac-label">Quando Usar</div>
+          <div style="font-size:11px;color:var(--dim);line-height:1.7">Qualquer decisão sobre o robô: lógica de entrada/saída, stops, gestão de posição, código MT5. Só Opus — decisão crítica financeira.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- HEAVY ANALYST -->
+    <div class="agent-card" style="border-color:rgba(255,107,43,.3)">
+      <div class="ac-head" style="background:rgba(255,107,43,.05)">
+        <span class="ac-icon">🔬</span>
+        <div class="ac-info">
+          <div class="ac-name" style="color:var(--orange)">HEAVY ANALYST</div>
+          <div class="ac-model">Cerebras GPT OSS 120B · Análise Profunda</div>
+        </div>
+        <span style="font-size:8px;font-family:'Share Tech Mono',monospace;padding:2px 8px;border-radius:99px;background:rgba(0,255,136,.1);color:var(--green);border:1px solid rgba(0,255,136,.3)">LIVE</span>
+      </div>
+      <div class="ac-body">
+        <div class="ac-section">
+          <div class="ac-label">Capacidades</div>
+          <div class="ac-caps">
+            <span class="cap">Raciocínio complexo</span><span class="cap">128k contexto</span>
+            <span class="cap">Análise de documentos</span><span class="cap">Lógica avançada</span><span class="cap">120B parâmetros</span>
+          </div>
+        </div>
+        <div class="ac-section">
+          <div class="ac-label">Pode Ajudar Em</div>
+          <div class="ac-projs">
+            <span class="proj-tag" style="border-color:rgba(176,106,255,.3);color:var(--purple)">🦺 Checklist ST</span>
+            <span class="proj-tag" style="border-color:rgba(255,183,0,.3);color:var(--amber)">📈 Forex</span>
+            <span class="proj-tag" style="border-color:rgba(77,159,255,.3);color:var(--blue)">Análise geral</span>
+          </div>
+        </div>
+        <div class="ac-section">
+          <div class="ac-label">Quando Usar</div>
+          <div style="font-size:11px;color:var(--dim);line-height:1.7">Análise longa e profunda sem custo. Ideal para processar PDFs de NRs, planilhas grandes, raciocínio em cadeia.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FAST RESPONDER -->
+    <div class="agent-card" style="border-color:rgba(255,183,0,.3)">
+      <div class="ac-head" style="background:rgba(255,183,0,.05)">
+        <span class="ac-icon">🏎️</span>
+        <div class="ac-info">
+          <div class="ac-name" style="color:var(--amber)">FAST RESPONDER</div>
+          <div class="ac-model">Groq Llama 3.3 70B · Análise Rápida</div>
+        </div>
+        <span style="font-size:8px;font-family:'Share Tech Mono',monospace;padding:2px 8px;border-radius:99px;background:rgba(0,255,136,.1);color:var(--green);border:1px solid rgba(0,255,136,.3)">LIVE</span>
+      </div>
+      <div class="ac-body">
+        <div class="ac-section">
+          <div class="ac-label">Capacidades</div>
+          <div class="ac-caps">
+            <span class="cap">800 tokens/segundo</span><span class="cap">128k contexto</span>
+            <span class="cap">Conversação fluida</span><span class="cap">Raciocínio geral</span><span class="cap">Drafts rápidos</span>
+          </div>
+        </div>
+        <div class="ac-section">
+          <div class="ac-label">Quando Usar</div>
+          <div style="font-size:11px;color:var(--dim);line-height:1.7">Quando precisa de resposta instantânea. Ideação, brainstorm, perguntas rápidas, revisões de texto. O mais rápido de todos.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MEMORY EMBEDDER -->
+    <div class="agent-card" style="border-color:rgba(0,255,136,.3)">
+      <div class="ac-head" style="background:rgba(0,255,136,.05)">
+        <span class="ac-icon">🗄️</span>
+        <div class="ac-info">
+          <div class="ac-name" style="color:var(--green)">MEMORY EMBEDDER</div>
+          <div class="ac-model">LM Studio nomic-embed · Base</div>
+        </div>
+        <span style="font-size:8px;font-family:'Share Tech Mono',monospace;padding:2px 8px;border-radius:99px;background:rgba(0,255,136,.1);color:var(--green);border:1px solid rgba(0,255,136,.3)">LIVE</span>
+      </div>
+      <div class="ac-body">
+        <div class="ac-section">
+          <div class="ac-label">Capacidades</div>
+          <div class="ac-caps">
+            <span class="cap">Embeddings vetoriais</span><span class="cap">Busca semântica</span>
+            <span class="cap">Indexação de sessões</span><span class="cap">Memória de longo prazo</span><span class="cap">R$0</span>
+          </div>
+        </div>
+        <div class="ac-section">
+          <div class="ac-label">Função</div>
+          <div style="font-size:11px;color:var(--dim);line-height:1.7">A memória do Falco. Indexa todas as sessões. Permite buscar "o que discutimos sobre X" meses depois. Roda local — sem custo, sem enviar dados.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- LCM SUMMARIZER -->
+    <div class="agent-card" style="border-color:rgba(0,255,136,.3)">
+      <div class="ac-head" style="background:rgba(0,255,136,.05)">
+        <span class="ac-icon">🔄</span>
+        <div class="ac-info">
+          <div class="ac-name" style="color:var(--green)">LCM SUMMARIZER</div>
+          <div class="ac-model">Gemini via lossless-claw · Base</div>
+        </div>
+        <span style="font-size:8px;font-family:'Share Tech Mono',monospace;padding:2px 8px;border-radius:99px;background:rgba(0,255,136,.1);color:var(--green);border:1px solid rgba(0,255,136,.3)">LIVE</span>
+      </div>
+      <div class="ac-body">
+        <div class="ac-section">
+          <div class="ac-label">Capacidades</div>
+          <div class="ac-caps">
+            <span class="cap">Compactação DAG</span><span class="cap">Sem perda de contexto</span>
+            <span class="cap">Resumo silencioso</span><span class="cap">Threshold 75%</span><span class="cap">48 msgs frescas</span>
+          </div>
+        </div>
+        <div class="ac-section">
+          <div class="ac-label">Função</div>
+          <div style="font-size:11px;color:var(--dim);line-height:1.7">Impede que as sessões "morram" por falta de contexto. Age silenciosamente antes do limite — o CEO nunca vê o problema.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══════ MATRIZ ══════ -->
+<div class="panel" id="panel-matrix">
+  <div class="legend">
+    <span class="leg-item"><span class="leg-box cell-primary">PRIMÁRIO</span> Projeto principal do agente</span>
+    <span class="leg-item"><span class="leg-box cell-support">SUPORTE</span> Pode ajudar ativamente</span>
+    <span class="leg-item"><span class="leg-box cell-can">EVENTUAL</span> Pode ser acionado se necessário</span>
+    <span class="leg-item" style="color:var(--dim);font-size:11px">— Não aplicável</span>
+  </div>
+  <div class="matrix-wrap">
+    <table class="matrix">
+      <thead>
+        <tr>
+          <th style="text-align:left;min-width:160px">AGENTE</th>
+          <th>TIER</th>
+          <th class="proj">⚽<br>Placar</th>
+          <th class="proj">🎵<br>G.Records</th>
+          <th class="proj">🦺<br>Checklist ST</th>
+          <th class="proj">📈<br>Forex</th>
+          <th class="proj">💊<br>Nutricional</th>
+          <th class="proj">🦅<br>Infra Falco</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="agent-name" style="color:var(--purple)">🏗️ Developer</td>
+          <td class="tier" style="color:var(--purple)">Sonnet</td>
+          <td><span class="cell-primary">PRIMÁRIO</span></td>
+          <td><span class="cell-can">EVENTUAL</span></td>
+          <td><span class="cell-support">SUPORTE</span></td>
+          <td><span class="cell-support">SUPORTE</span></td>
+          <td><span class="cell-can">EVENTUAL</span></td>
+          <td><span class="cell-support">SUPORTE</span></td>
+        </tr>
+        <tr>
+          <td class="agent-name" style="color:var(--purple)">🗺️ Architect</td>
+          <td class="tier" style="color:var(--purple)">Sonnet</td>
+          <td><span class="cell-support">SUPORTE</span></td>
+          <td><span class="cell-can">EVENTUAL</span></td>
+          <td><span class="cell-support">SUPORTE</span></td>
+          <td><span class="cell-support">SUPORTE</span></td>
+          <td><span class="cell-can">EVENTUAL</span></td>
+          <td><span class="cell-primary">PRIMÁRIO</span></td>
+        </tr>
+        <tr>
+          <td class="agent-name" style="color:var(--purple)">🚀 DevOps</td>
+          <td class="tier" style="color:var(--purple)">Sonnet</td>
+          <td><span class="cell-support">SUPORTE</span></td>
+          <td><span class="cell-can">EVENTUAL</span></td>
+          <td><span class="cell-can">EVENTUAL</span></td>
+          <td><span class="cell-can">EVENTUAL</span></td>
+          <td><span class="cell-can">EVENTUAL</span></td>
+          <td><span class="cell-primary">PRIMÁRIO</span></td>
+        </tr>
+        <tr>
+          <td class="agent-name" style="color:var(--purple)">🔍 RootCause</td>
+          <td class="tier" style="color:var(--purple)">Sonnet</td>
+          <td><span class="cell-support">SUPORTE</span></td>
+          <td><span class="cell-can">EVENTUAL</span></td>
+          <td><span class="cell-support">SUPORTE</span></td>
+          <td><span class="cell-support">SUPORTE</span></td>
+          <td><span class="cell-can">EVENTUAL</span></td>
+          <td><span class="cell-support">SUPORTE</span></td>
+        </tr>
+        <tr style="background:rgba(255,255,255,.01)">
+          <td class="agent-name" style="color:var(--blue)">🎵 Content Creator</td>
+          <td class="tier" style="color:var(--blue)">Gemini</td>
+          <td><span class="cell-can">EVENTUAL</span></td>
+          <td><span class="cell-primary">PRIMÁRIO</span></td>
+          <td><span class="cell-no">—</span></td>
+          <td><span class="cell-no">—</span></td>
+          <td><span class="cell-support">SUPORTE</span></td>
+          <td><span class="cell-no">—</span></td>
+        </tr>
+        <tr style="background:rgba(255,255,255,.01)">
+          <td class="agent-name" style="color:var(--blue)">✍️ Copywriter</td>
+          <td class="tier" style="color:var(--green)">LM Studio</td>
+          <td><span class="cell-can">EVENTUAL</span></td>
+          <td><span class="cell-primary">PRIMÁRIO</span></td>
+          <td><span class="cell-no">—</span></td>
+          <td><span class="cell-no">—</span></td>
+          <td><span class="cell-support">SUPORTE</span></td>
+          <td><span class="cell-no">—</span></td>
+        </tr>
+        <tr style="background:rgba(255,255,255,.01)">
+          <td class="agent-name" style="color:var(--blue)">📊 Analyst</td>
+          <td class="tier" style="color:var(--blue)">Gemini</td>
+          <td><span class="cell-support">SUPORTE</span></td>
+          <td><span class="cell-support">SUPORTE</span></td>
+          <td><span class="cell-primary">PRIMÁRIO</span></td>
+          <td><span class="cell-support">SUPORTE</span></td>
+          <td><span class="cell-support">SUPORTE</span></td>
+          <td><span class="cell-can">EVENTUAL</span></td>
+        </tr>
+        <tr style="background:rgba(255,255,255,.01)">
+          <td class="agent-name" style="color:var(--blue)">📅 Project Manager</td>
+          <td class="tier" style="color:var(--blue)">Gemini</td>
+          <td><span class="cell-support">SUPORTE</span></td>
+          <td><span class="cell-support">SUPORTE</span></td>
+          <td><span class="cell-support">SUPORTE</span></td>
+          <td><span class="cell-support">SUPORTE</span></td>
+          <td><span class="cell-support">SUPORTE</span></td>
+          <td><span class="cell-support">SUPORTE</span></td>
+        </tr>
+        <tr>
+          <td class="agent-name" style="color:var(--red)">🧠 Strategic Planner</td>
+          <td class="tier" style="color:var(--red)">Opus</td>
+          <td><span class="cell-can">EVENTUAL</span></td>
+          <td><span class="cell-can">EVENTUAL</span></td>
+          <td><span class="cell-can">EVENTUAL</span></td>
+          <td><span class="cell-support">SUPORTE</span></td>
+          <td><span class="cell-can">EVENTUAL</span></td>
+          <td><span class="cell-support">SUPORTE</span></td>
+        </tr>
+        <tr>
+          <td class="agent-name" style="color:var(--red)">📈 Forex Advisor</td>
+          <td class="tier" style="color:var(--red)">Opus</td>
+          <td><span class="cell-no">—</span></td>
+          <td><span class="cell-no">—</span></td>
+          <td><span class="cell-no">—</span></td>
+          <td><span class="cell-primary">PRIMÁRIO</span></td>
+          <td><span class="cell-no">—</span></td>
+          <td><span class="cell-no">—</span></td>
+        </tr>
+        <tr>
+          <td class="agent-name" style="color:var(--red)">⚔️ Conclave</td>
+          <td class="tier" style="color:var(--red)">Opus</td>
+          <td><span class="cell-can">EVENTUAL</span></td>
+          <td><span class="cell-no">—</span></td>
+          <td><span class="cell-can">EVENTUAL</span></td>
+          <td><span class="cell-primary">PRIMÁRIO</span></td>
+          <td><span class="cell-can">EVENTUAL</span></td>
+          <td><span class="cell-support">SUPORTE</span></td>
+        </tr>
+        <tr style="background:rgba(255,255,255,.01)">
+          <td class="agent-name" style="color:var(--orange)">🔬 Heavy Analyst</td>
+          <td class="tier" style="color:var(--orange)">Cerebras 120B</td>
+          <td><span class="cell-support">SUPORTE</span></td>
+          <td><span class="cell-can">EVENTUAL</span></td>
+          <td><span class="cell-primary">PRIMÁRIO</span></td>
+          <td><span class="cell-support">SUPORTE</span></td>
+          <td><span class="cell-support">SUPORTE</span></td>
+          <td><span class="cell-can">EVENTUAL</span></td>
+        </tr>
+        <tr style="background:rgba(255,255,255,.01)">
+          <td class="agent-name" style="color:var(--orange)">📚 Research Agent</td>
+          <td class="tier" style="color:var(--orange)">Cerebras GLM</td>
+          <td><span class="cell-can">EVENTUAL</span></td>
+          <td><span class="cell-can">EVENTUAL</span></td>
+          <td><span class="cell-support">SUPORTE</span></td>
+          <td><span class="cell-can">EVENTUAL</span></td>
+          <td><span class="cell-primary">PRIMÁRIO</span></td>
+          <td><span class="cell-no">—</span></td>
+        </tr>
+        <tr style="background:rgba(255,255,255,.01)">
+          <td class="agent-name" style="color:var(--amber)">🏎️ Fast Responder</td>
+          <td class="tier" style="color:var(--amber)">Groq 70B</td>
+          <td><span class="cell-can">EVENTUAL</span></td>
+          <td><span class="cell-support">SUPORTE</span></td>
+          <td><span class="cell-can">EVENTUAL</span></td>
+          <td><span class="cell-can">EVENTUAL</span></td>
+          <td><span class="cell-can">EVENTUAL</span></td>
+          <td><span class="cell-can">EVENTUAL</span></td>
+        </tr>
+        <tr>
+          <td class="agent-name" style="color:var(--green)">🗄️ Memory Embedder</td>
+          <td class="tier" style="color:var(--green)">LM Studio</td>
+          <td><span class="cell-support">SUPORTE</span></td>
+          <td><span class="cell-support">SUPORTE</span></td>
+          <td><span class="cell-support">SUPORTE</span></td>
+          <td><span class="cell-support">SUPORTE</span></td>
+          <td><span class="cell-support">SUPORTE</span></td>
+          <td><span class="cell-primary">PRIMÁRIO</span></td>
+        </tr>
+        <tr>
+          <td class="agent-name" style="color:var(--green)">🔄 LCM Summarizer</td>
+          <td class="tier" style="color:var(--blue)">Gemini</td>
+          <td><span class="cell-support">SUPORTE</span></td>
+          <td><span class="cell-support">SUPORTE</span></td>
+          <td><span class="cell-support">SUPORTE</span></td>
+          <td><span class="cell-support">SUPORTE</span></td>
+          <td><span class="cell-support">SUPORTE</span></td>
+          <td><span class="cell-primary">PRIMÁRIO</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+</div><!-- main -->
+
+<footer style="text-align:center;padding:12px;font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--dim);border-top:1px solid var(--border)">
+  GAVIOLI CORP · FALCO 🦅 · MAPA TÁTICO v1.0 — 2026
+</footer>
+
+<script>
+function show(id,el){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('panel-'+id).classList.add('active');
+  el.classList.add('active');
+}
+
+const agentData = {
+  developer:{icon:'🏗️',name:'Developer',model:'Claude Sonnet 4.6',caps:['JavaScript','Python','React','APIs','debug','refatoração'],proj:'⚽ Placar Analítico',helps:['🦺 Checklist ST','📈 Forex Robot','🎵 Gavioli Records'],when:'Toda programação pesada. Código novo, bugfixes, integrações, lógica crítica.'},
+  architect:{icon:'🗺️',name:'Architect',model:'Claude Sonnet 4.6',caps:['design de sistemas','decisões técnicas','trade-offs','escalabilidade'],proj:'🦅 Infra Falco',helps:['todos os projetos'],when:'Antes de começar qualquer feature. Decidir estrutura, bibliotecas, como os módulos se conectam.'},
+  devops:{icon:'🚀',name:'DevOps',model:'Claude Sonnet 4.6',caps:['GitHub Actions','systemd','Docker','deploy','SSH','cron'],proj:'🦅 Infra Falco',helps:['todos — deploy e automação'],when:'Deploy, automações, CI/CD, configuração de servidores, cron jobs.'},
+  rootcause:{icon:'🔍',name:'RootCause',model:'Claude Sonnet 4.6',caps:['debug profundo','stack traces','análise de logs','hotfixes'],proj:'qualquer projeto',helps:['todos'],when:"Qualquer erro que não resolve. 'Tá quebrando mas não sei por quê' → ele investiga."},
+  content:{icon:'🎵',name:'Content Creator',model:'Gemini 3.1 Pro',caps:['posts TikTok/YouTube','roteiros','legendas','hashtags','calendário editorial'],proj:'🎵 Gavioli Records',helps:['💊 Produto Nutricional','⚽ Placar Analítico'],when:'Criar conteúdo semanal para redes. Roteiro de lançamentos, textos das músicas, promoções.'},
+  copywriter:{icon:'✍️',name:'Copywriter',model:'LM Studio Qwen 2.5',caps:['legendas rápidas','textos simples','templates','rascunhos'],proj:'🎵 Gavioli Records',helps:['💊 Produto Nutricional'],when:'Textos rápidos, legendas, posts simples. Grátis e local — para volume alto de conteúdo simples.'},
+  analyst:{icon:'📊',name:'Analyst',model:'Gemini 3.1 Pro',caps:['pesquisa web','análise de mercado','relatórios','benchmarks','tendências'],proj:'🦺 Checklist ST',helps:['todos os projetos'],when:'Pesquisar NRs, tendências do mercado whey, dados Premier League, análise de competidores.'},
+  pm:{icon:'📅',name:'Project Manager',model:'Gemini 3.1 Pro',caps:['planejamento','sprints','orquestração','checklists','deadlines'],proj:'todos os projetos',helps:['todos'],when:'Organizar o que fazer, priorizar, criar planos de ação, montar sprints.'},
+  strategist:{icon:'🧠',name:'Strategic Planner',model:'Claude Opus 4.8',caps:['decisões críticas','visão de longo prazo','análise de risco','priorização'],proj:'Todos',helps:['todos'],when:'Decisões irreversíveis, pivots, questões financeiras ou de reputação. Usar com parcimônia.'},
+  forex:{icon:'📈',name:'Forex Advisor',model:'Claude Opus 4.8',caps:['XAUUSD','FImathe','MT5/MQL5','gestão de risco','backtesting'],proj:'📈 Forex Robot',helps:['-'],when:'Qualquer decisão sobre o robô: lógica, stops, gestão de posição, código MT5.'},
+  conclave:{icon:'⚔️',name:'Conclave',model:'Claude Opus 4.8',caps:['debate','crítica','advocatus diaboli','auditoria de lógica'],proj:'📈 Forex Robot',helps:['todos — validação crítica'],when:'Antes de uma decisão grande. O Conclave questiona, critica e tenta furar o plano.'},
+  fast70:{icon:'🏎️',name:'Fast Responder',model:'Groq Llama 3.3 70B',caps:['800 tok/s','128k contexto','conversação','brainstorm','drafts'],proj:'qualquer',helps:['todos'],when:'Quando precisa de resposta instantânea. O mais rápido de todos — ótimo para ideação.'},
+  fast8:{icon:'⚡',name:'Quick Tasks',model:'Groq Llama 3.1 8B',caps:['ultra-rápido','tarefas simples','perguntas diretas'],proj:'qualquer',helps:['todos'],when:'Tarefas muito simples e rápidas. Classificações, extrações simples, YesNo.'},
+  heavy120:{icon:'🔬',name:'Heavy Analyst',model:'Cerebras GPT OSS 120B',caps:['raciocínio complexo','128k contexto','análise de documentos','lógica avançada'],proj:'🦺 Checklist ST',helps:['📈 Forex','análise geral'],when:'Análise longa e profunda sem custo. Processar PDFs de NRs, planilhas, raciocínio em cadeia.'},
+  research:{icon:'📚',name:'Research Agent',model:'Cerebras ZAI GLM 4.7',caps:['pesquisa especializada','128k contexto','análise técnica'],proj:'💊 Produto Nutricional',helps:['🦺 Checklist ST'],when:'Pesquisa técnica e especializada. Embasamento científico, artigos, normas.'},
+  embedder:{icon:'🗄️',name:'Memory Embedder',model:'LM Studio nomic-embed',caps:['embeddings vetoriais','busca semântica','indexação de sessões','memória permanente'],proj:'🦅 Infra Falco',helps:['todos'],when:'Sempre ativo. A memória do Falco — indexa tudo automaticamente.'},
+  lcm:{icon:'🔄',name:'LCM Summarizer',model:'Gemini via lossless-claw',caps:['compactação DAG','sem perda de contexto','resumo silencioso'],proj:'🦅 Infra Falco',helps:['todos'],when:'Sempre ativo. Age antes do contexto estourar. CEO nunca vê o problema.'},
+  template:{icon:'📄',name:'Template Creator',model:'LM Studio Qwen 2.5',caps:['templates reutilizáveis','estruturas padrão','boilerplates'],proj:'todos',helps:['todos'],when:'Criar modelos de posts, relatórios, respostas padrão. Grátis e local.'}
+};
+
+function showAgent(id){
+  const a = agentData[id];
+  if(!a) return;
+  const modal = document.getElementById('agent-modal');
+  const body = document.getElementById('modal-body');
+  body.innerHTML = `
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+      <span style="font-size:32px">${a.icon}</span>
+      <div>
+        <div style="font-family:'Orbitron',monospace;font-size:13px;font-weight:700;color:var(--cyan)">${a.name}</div>
+        <div style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--dim);margin-top:2px">${a.model}</div>
+      </div>
+    </div>
+    <div style="margin-bottom:12px">
+      <div style="font-family:'Orbitron',monospace;font-size:8px;letter-spacing:2px;color:var(--dim);margin-bottom:6px">CAPACIDADES</div>
+      <div style="display:flex;flex-wrap:wrap;gap:4px">${a.caps.map(c=>`<span style="padding:2px 8px;border-radius:99px;font-size:9px;font-family:'Share Tech Mono',monospace;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);color:var(--text)">${c}</span>`).join('')}</div>
+    </div>
+    <div style="margin-bottom:12px">
+      <div style="font-family:'Orbitron',monospace;font-size:8px;letter-spacing:2px;color:var(--dim);margin-bottom:6px">PROJETO PRINCIPAL</div>
+      <div style="font-size:12px;color:var(--cyan)">${a.proj}</div>
+    </div>
+    <div style="margin-bottom:12px">
+      <div style="font-family:'Orbitron',monospace;font-size:8px;letter-spacing:2px;color:var(--dim);margin-bottom:6px">PODE AJUDAR EM</div>
+      <div style="font-size:12px;color:var(--text)">${Array.isArray(a.helps)?a.helps.join(' · '):a.helps}</div>
+    </div>
+    <div>
+      <div style="font-family:'Orbitron',monospace;font-size:8px;letter-spacing:2px;color:var(--dim);margin-bottom:6px">QUANDO USAR</div>
+      <div style="font-size:11px;color:var(--dim);line-height:1.7">${a.when}</div>
+    </div>
+  `;
+  modal.style.display='flex';
+}
+
+function closeModal(e){
+  if(e.target.id==='agent-modal') document.getElementById('agent-modal').style.display='none';
+}
+</script>
+</body>
+</html>
